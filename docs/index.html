@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Permian Basin Production Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+<style>
+  :root{
+    --canvas:#eef1f3; --panel:#ffffff; --ink:#141a22; --slate:#5a6572;
+    --navy:#1f3a5f; --oil:#c47d1a; --gas:#0d7d7d; --decline:#b3261e; --line:#d7dde2;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--canvas);color:var(--ink);
+    font-family:Inter,system-ui,sans-serif;line-height:1.5}
+  .wrap{max-width:1180px;margin:0 auto;padding:32px 20px 64px}
+  header{border-bottom:2px solid var(--navy);padding-bottom:20px;margin-bottom:24px}
+  .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--oil);margin:0 0 6px}
+  h1{font-family:Archivo,sans-serif;font-weight:800;font-size:clamp(26px,4.5vw,40px);
+    letter-spacing:-.01em;margin:0;color:var(--navy)}
+  .sub{color:var(--slate);margin:8px 0 0;max-width:60ch}
+  .meta{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--slate);
+    margin-top:12px;display:flex;gap:18px;flex-wrap:wrap}
+  .meta b{color:var(--ink);font-weight:600}
+
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:24px 0 32px}
+  @media(max-width:900px){.kpis{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:520px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:14px 14px 12px;border-top:3px solid var(--navy)}
+  .kpi .label{font-size:11px;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--slate);font-weight:600}
+  .kpi .val{font-family:"IBM Plex Mono",monospace;font-weight:600;
+    font-size:26px;margin:6px 0 2px;color:var(--ink);line-height:1}
+  .kpi .unit{font-size:11px;color:var(--slate)}
+  .kpi .yoy{font-family:"IBM Plex Mono",monospace;font-size:12px;margin-top:6px;font-weight:600}
+  .up{color:#0d7d3f}.down{color:var(--decline)}.flat{color:var(--slate)}
+  .kpi.oil{border-top-color:var(--oil)}.kpi.gas{border-top-color:var(--gas)}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 16px 8px}
+  .card h2{font-family:Archivo,sans-serif;font-size:16px;margin:0;color:var(--navy)}
+  .card p{font-size:13px;color:var(--slate);margin:4px 0 10px}
+  .chart{width:100%;height:320px}
+
+  footer{margin-top:36px;border-top:1px solid var(--line);padding-top:18px;
+    font-size:12.5px;color:var(--slate)}
+  footer b{color:var(--ink)}
+  footer a{color:var(--navy)}
+  .legend-note{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--slate);
+    margin:2px 0 12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">U.S. Shale Intelligence · EIA STEO</p>
+    <h1>Permian Basin Production Analytics</h1>
+    <p class="sub">Monthly production, drilling activity, and base-decline dynamics for the
+      Permian Basin, built on public U.S. Energy Information Administration data and refreshed automatically.</p>
+    <div class="meta">
+      <span>Source: <b>EIA Short-Term Energy Outlook</b></span>
+      <span>Latest actual: <b id="m-updated">—</b></span>
+      <span>Shaded = <b>forecast</b></span>
+    </div>
+  </header>
+
+  <section class="kpis" id="kpis"></section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>Crude oil production</h2>
+      <p>Regional Permian crude and tight-oil output. The basin keeps setting records.</p>
+      <div id="c-oil" class="chart"></div>
+    </div>
+    <div class="card">
+      <h2>More output, fewer rigs</h2>
+      <p>Rig count against crude production — the efficiency story of modern shale.</p>
+      <div id="c-eff" class="chart"></div>
+    </div>
+    <div class="card">
+      <h2>New wells vs. base decline</h2>
+      <p>New-well additions (+) offset the decline of existing wells (−). The net line stays positive while the basin grows.</p>
+      <div id="c-dec" class="chart"></div>
+    </div>
+    <div class="card">
+      <h2>Drilled-but-uncompleted inventory</h2>
+      <p>DUC inventory alongside the pace of drilling and completion.</p>
+      <div id="c-duc" class="chart"></div>
+    </div>
+  </section>
+
+  <footer>
+    <p><b>Methodology &amp; notes.</b> Data from the EIA Short-Term Energy Outlook (STEO), monthly, at basin/region
+      granularity; values beyond the latest actual month are EIA forecasts (shaded). Crude and tight oil in
+      million bbl/day; new-well and base-change series in thousand bbl/day; gas in Bcf/day. Well-level decline
+      curves, water cut, and gas-oil ratio require well-level data (Texas RRC / New Mexico OCD) and are out of
+      scope at this granularity. Built with Python (ETL via GitHub Actions) and Plotly.</p>
+    <p style="margin-top:8px">Independent analytics project · data © U.S. Energy Information Administration (public domain).</p>
+  </footer>
+</div>
+
+<script src="data.js"></script>
+<script>
+(function(){
+  if(!window.PERMIAN){document.getElementById('kpis').innerHTML='<p>data.js not found — run export_web.py.</p>';return;}
+  var rows = window.PERMIAN.rows;
+  var updatedISO = window.PERMIAN.updated;
+  var x = rows.map(function(r){return r.period;});
+  var col = function(k){return rows.map(function(r){return (r[k]===undefined?null:r[k]);});};
+  var idxHist = updatedISO ? x.indexOf(updatedISO) : x.length-1;
+  if(idxHist<0) idxHist = x.length-1;
+
+  function fmt(v,d){ if(v===null||v===undefined||isNaN(v)) return '—';
+    return Number(v).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+  function lastHist(k){ for(var i=idxHist;i>=0;i--){ if(rows[i][k]!=null) return {v:rows[i][k],i:i};} return {v:null,i:-1}; }
+  function yoy(k){ var l=lastHist(k); if(l.i<12||rows[l.i-12][k]==null) return null;
+    return (l.v/rows[l.i-12][k]-1)*100; }
+
+  // ---- KPIs ----
+  var defs = [
+    {k:'crude_oil_prod',label:'Crude oil',unit:'M bbl/d',d:2,cls:'oil'},
+    {k:'tight_oil_prod',label:'Tight oil',unit:'M bbl/d',d:2,cls:'oil'},
+    {k:'shale_gas_prod',label:'Shale gas',unit:'Bcf/d',d:1,cls:'gas'},
+    {k:'active_rigs',label:'Active rigs',unit:'count',d:0,cls:''},
+    {k:'ducs',label:'DUC inventory',unit:'wells',d:0,cls:''},
+    {k:'net_oil_change',label:'Net oil change',unit:'k bbl/d',d:0,cls:'oil'}
+  ];
+  document.getElementById('m-updated').textContent = updatedISO ? updatedISO.slice(0,7) : '—';
+  document.getElementById('kpis').innerHTML = defs.map(function(dd){
+    var l=lastHist(dd.k), y=yoy(dd.k);
+    var ycls = y==null?'flat':(y>0.05?'up':(y<-0.05?'down':'flat'));
+    var yTxt = y==null?'n/a':(y>0?'▲ ':'▼ ')+Math.abs(y).toFixed(1)+'% y/y';
+    return '<div class="kpi '+dd.cls+'"><div class="label">'+dd.label+'</div>'+
+      '<div class="val">'+fmt(l.v,dd.d)+'</div><div class="unit">'+dd.unit+'</div>'+
+      '<div class="yoy '+ycls+'">'+yTxt+'</div></div>';
+  }).join('');
+
+  // ---- forecast shading ----
+  var fShape = updatedISO && idxHist < x.length-1 ? [{
+    type:'rect',xref:'x',yref:'paper',x0:x[idxHist],x1:x[x.length-1],y0:0,y1:1,
+    fillcolor:'#8a97a3',opacity:0.10,line:{width:0}
+  }] : [];
+  var fLine = updatedISO && idxHist < x.length-1 ? [{
+    type:'line',xref:'x',yref:'paper',x0:x[idxHist],x1:x[idxHist],y0:0,y1:1,
+    line:{color:'#8a97a3',width:1,dash:'dot'}
+  }] : [];
+  var base = {margin:{l:52,r:52,t:8,b:30},paper_bgcolor:'rgba(0,0,0,0)',
+    plot_bgcolor:'rgba(0,0,0,0)',font:{family:'Inter,sans-serif',size:12,color:'#141a22'},
+    legend:{orientation:'h',y:1.12,x:0,font:{size:11}},hovermode:'x unified',
+    xaxis:{gridcolor:'#e6eaee'},shapes:fShape.concat(fLine)};
+  var cfg={displayModeBar:false,responsive:true};
+  function ax(t){return {title:{text:t,font:{size:11}},gridcolor:'#e6eaee'};}
+
+  var NAVY='#1f3a5f',OIL='#c47d1a',GAS='#0d7d7d',DEC='#b3261e';
+
+  // 1 · oil
+  Plotly.newPlot('c-oil',[
+    {x:x,y:col('crude_oil_prod'),name:'Crude oil',mode:'lines',line:{color:NAVY,width:2.4},connectgaps:false},
+    {x:x,y:col('tight_oil_prod'),name:'Tight oil',mode:'lines',line:{color:GAS,width:1.4,dash:'dash'},connectgaps:false}
+  ],Object.assign({},base,{yaxis:ax('Million bbl/day')}),cfg);
+
+  // 2 · efficiency (rigs vs crude)
+  Plotly.newPlot('c-eff',[
+    {x:x,y:col('active_rigs'),name:'Active rigs',mode:'lines',line:{color:NAVY,width:2},connectgaps:false},
+    {x:x,y:col('crude_oil_prod'),name:'Crude oil',yaxis:'y2',mode:'lines',line:{color:OIL,width:2},connectgaps:false}
+  ],Object.assign({},base,{yaxis:ax('Active rigs'),
+     yaxis2:{title:{text:'Crude (M bbl/d)',font:{size:11}},overlaying:'y',side:'right',gridcolor:'rgba(0,0,0,0)'}}),cfg);
+
+  // 3 · decline story
+  Plotly.newPlot('c-dec',[
+    {x:x,y:col('newwell_oil_prod'),name:'New wells (+)',type:'bar',marker:{color:GAS}},
+    {x:x,y:col('existing_oil_change'),name:'Base decline (−)',type:'bar',marker:{color:DEC}},
+    {x:x,y:col('net_oil_change'),name:'Net',mode:'lines',line:{color:NAVY,width:2}}
+  ],Object.assign({},base,{barmode:'relative',yaxis:ax('Thousand bbl/day')}),cfg);
+
+  // 4 · DUCs
+  Plotly.newPlot('c-duc',[
+    {x:x,y:col('ducs'),name:'DUC inventory',mode:'lines',line:{color:GAS,width:2.2},connectgaps:false},
+    {x:x,y:col('new_wells_drilled'),name:'Drilled',yaxis:'y2',mode:'lines',line:{color:NAVY,width:1.2},connectgaps:false},
+    {x:x,y:col('new_wells_completed'),name:'Completed',yaxis:'y2',mode:'lines',line:{color:OIL,width:1.2},connectgaps:false}
+  ],Object.assign({},base,{yaxis:ax('DUC wells'),
+     yaxis2:{title:{text:'Wells / month',font:{size:11}},overlaying:'y',side:'right',gridcolor:'rgba(0,0,0,0)'}}),cfg);
+})();
+</script>
+</body>
+</html>
