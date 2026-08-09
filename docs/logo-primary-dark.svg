@@ -1,0 +1,9 @@
+<svg width="380" height="92" viewBox="0 0 380 92" xmlns="http://www.w3.org/2000/svg">
+<defs><style>@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@800;900&amp;family=IBM+Plex+Mono:wght@600&amp;display=swap");</style></defs>
+  <rect x="4" y="9" width="74" height="74" rx="6" fill="#ffffff" fill-opacity="0.06" stroke="#c47d1a" stroke-width="1.5"/>
+  <path d="M14 65 C 30 63, 36 47, 46 37 S 64 21, 70 17" fill="none" stroke="#e0a84e" stroke-width="4" stroke-linecap="round"/>
+  <line x1="14" y1="71" x2="70" y2="71" stroke="#3a556f" stroke-width="2"/>
+  <text x="41" y="55" text-anchor="middle" font-family="Archivo, Arial, sans-serif" font-weight="900" font-size="30" fill="#ffffff" letter-spacing="-1">CB</text>
+  <text x="94" y="43" font-family="Archivo, Arial, sans-serif" font-weight="900" font-size="26" fill="#ffffff" letter-spacing="-.5">CLAUDIO BUTASSI</text>
+  <text x="95" y="66" font-family="'IBM Plex Mono', monospace" font-weight="600" font-size="12.5" fill="#e0a84e" letter-spacing="3">ENERGY &amp; DATA ANALYTICS</text>
+</svg>
