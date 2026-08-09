@@ -1,0 +1,40 @@
+name: Weekly data refresh
+
+on:
+  schedule:
+    - cron: '0 12 * * 1'      # todos los lunes 12:00 UTC (~09:00 en Argentina)
+  workflow_dispatch:           # permite correrlo a mano desde la pestaña Actions
+
+permissions:
+  contents: write              # para que el bot pueda commitear el data.js
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests pandas numpy python-dotenv pyarrow
+
+      - name: Run ETL + export web data
+        env:
+          EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+        run: |
+          rm -rf data/raw data/processed
+          python etl.py
+          python export_web.py
+
+      - name: Commit refreshed data
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/data.js data/processed/permian.csv || true
+          git diff --staged --quiet || git commit -m "chore: weekly EIA data refresh"
+          git push
