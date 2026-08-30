@@ -81,6 +81,10 @@
     text-decoration:none;padding:11px 16px;border-bottom:2px solid transparent}
   .pagenav a:hover{color:#fff}
   .pagenav a.active{color:#fff;border-bottom-color:#c47d1a}
+  .hero{padding:24px 0 4px}
+  .hero h1{font-family:Archivo,sans-serif;color:var(--navy);font-size:clamp(23px,3.3vw,33px);line-height:1.08;margin:0 0 8px;letter-spacing:-.01em}
+  .hero .lede{max-width:74ch;color:var(--muted);font-size:15px;margin:0}
+  .hero .lede b{color:var(--ink);font-weight:600}
 </style>
 </head>
 <body>
@@ -96,6 +100,11 @@
 </div></header>
 
 <div class="wrap">
+
+  <section class="hero">
+    <h1>Permian Basin — Production Analytics</h1>
+    <p class="lede">The basin behind roughly <b>48% of U.S. crude oil</b> — tracked monthly from official EIA data: production and decline, rig-vs-output efficiency, new-well additions, and drilled-but-uncompleted (DUC) inventory.</p>
+  </section>
 
   <div class="toolbar">
     <div class="ctrl"><label for="from">From</label><select id="from"></select></div>
@@ -118,7 +127,7 @@
       <div id="c-prod" class="chart tall"></div>
     </div>
     <div class="panel">
-      <div class="h"><h3>Efficiency: rigs vs. output</h3><span class="sub">Rigs (left) · crude (right)</span></div>
+      <div class="h"><h3>Efficiency: rigs vs. output</h3><span class="sub">Rigs (left) · crude (right) — fewer rigs, more output</span></div>
       <div id="c-eff" class="chart"></div>
     </div>
     <div class="panel">
