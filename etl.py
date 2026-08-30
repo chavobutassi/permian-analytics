@@ -55,6 +55,8 @@ SERIES = {
     "NGNWPM":  "newwell_gas_prod",
     "NGNWRPM": "newwell_gas_per_rig",
     "NGEOPPM": "existing_gas_change",  # Cambio de prod. de pozos existentes (gas)
+    # Precios (referencia económica — serie nacional del STEO, no Permian)
+    "WTIPUUS": "wti",                  # WTI spot average, US$/bbl
 }
 
 START = "2014-01"  # el shale de la Permian despega ~2014; ajustable

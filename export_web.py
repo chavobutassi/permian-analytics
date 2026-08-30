@@ -22,7 +22,7 @@ COLS = [
     "period", "crude_oil_prod", "tight_oil_prod", "shale_gas_prod",
     "gas_marketed_prod", "active_rigs", "new_wells_drilled", "new_wells_completed",
     "ducs", "newwell_oil_prod", "existing_oil_change", "net_oil_change",
-    "completion_ratio",
+    "completion_ratio", "wti",
 ]
 
 
