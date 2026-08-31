@@ -138,10 +138,14 @@
       <div class="h"><h3>Drilled-but-uncompleted inventory</h3><span class="sub">DUCs (left) · drilling &amp; completion pace (right)</span></div>
       <div id="c-duc" class="chart"></div>
     </div>
+    <div class="panel wide">
+      <div class="h"><h3>Production economics: price vs. drilling</h3><span class="sub">WTI spot (left) · active rigs (right) · Permian breakeven band shaded — as price nears breakeven, drilling cools</span></div>
+      <div id="c-econ" class="chart"></div>
+    </div>
   </section>
 
   <footer>
-    <b>Source:</b> U.S. Energy Information Administration — Short-Term Energy Outlook (STEO), via EIA API v2. Monthly, basin/region granularity; values past the latest actual month are EIA forecasts (shaded). Crude &amp; tight oil in million bbl/day; new-well and base-change series in thousand bbl/day; gas in Bcf/day. Built with Python (automated ETL) and Plotly.
+    <b>Source:</b> U.S. Energy Information Administration — Short-Term Energy Outlook (STEO), via EIA API v2. Monthly, basin/region granularity; values past the latest actual month are EIA forecasts (shaded). Crude &amp; tight oil in million bbl/day; new-well and base-change series in thousand bbl/day; gas in Bcf/day. WTI spot price in US$/bbl (EIA STEO); Permian breakeven from the Dallas Fed Energy Survey. Built with Python (automated ETL) and Plotly.
     <div class="sig"><img src="logo-primary.svg" alt="Claudio Butassi"><span class="mono">Claudio Butassi · Energy &amp; Data Analytics · github.com/chavobutassi</span></div>
   </footer>
 </div>
@@ -273,7 +277,22 @@
       {x:vx,y:C(v,'new_wells_completed'),name:'Completed',yaxis:'y2',mode:'lines',line:{color:OIL,width:1.3},connectgaps:false,hovertemplate:HT('/mo',0)}
     ],baseLayout(vx,'DUC wells',{yaxis2:{title:{text:'Wells / month',font:{size:11}},overlaying:'y',side:'right',gridcolor:'rgba(0,0,0,0)',zeroline:false}}),cfg);
   }
-  function renderAll(){renderProd();renderEff();renderEng();renderDuc();}
+  function renderEcon(){
+    var v=view(),vx=X(v);
+    var lay=baseLayout(vx,'WTI ($/bbl)',{yaxis2:{title:{text:'Active rigs',font:{size:11}},overlaying:'y',side:'right',gridcolor:'rgba(0,0,0,0)',zeroline:false}});
+    lay.shapes=(lay.shapes||[]).concat([
+      {type:'rect',xref:'paper',yref:'y',x0:0,x1:1,y0:61,y1:62,fillcolor:DEC,opacity:0.10,line:{width:0}},
+      {type:'line',xref:'paper',yref:'y',x0:0,x1:1,y0:61.5,y1:61.5,line:{color:DEC,width:1,dash:'dot'}}
+    ]);
+    lay.annotations=(lay.annotations||[]).concat([
+      {x:0,y:62,xref:'paper',yref:'y',xanchor:'left',yanchor:'bottom',text:'Permian breakeven ≈ $61–62 (Dallas Fed)',showarrow:false,font:{size:10,color:DEC,family:'IBM Plex Mono,monospace'}}
+    ]);
+    Plotly.react('c-econ',[
+      {x:vx,y:C(v,'wti'),name:'WTI spot',mode:'lines',line:{color:NAVY,width:2.4},connectgaps:false,hovertemplate:HT('$/bbl',0)},
+      {x:vx,y:C(v,'active_rigs'),name:'Active rigs',yaxis:'y2',mode:'lines',line:{color:OIL,width:1.6},connectgaps:false,hovertemplate:HT('rigs',0)}
+    ],lay,cfg);
+  }
+  function renderAll(){renderProd();renderEff();renderEng();renderDuc();renderEcon();}
 
   // ---- controls ----
   var selFrom=document.getElementById('from'), selTo=document.getElementById('to');
