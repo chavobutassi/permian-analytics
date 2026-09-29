@@ -1,8 +1,40 @@
-- name: Commit and push
-  run: |
-    git config user.name  "github-actions[bot]"
-    git config user.email "github-actions[bot]@users.noreply.github.com"
-    git add -A
-    git commit -m "chore: weekly EIA data refresh" || echo "nada que commitear"
-    git pull --rebase origin main
-    git push origin main
+name: Weekly data refresh
+
+on:
+  schedule:
+    - cron: "0 12 * * 1"        # lunes 12:00 UTC (~09:00 ART)
+  workflow_dispatch:            # habilita el botón "Run workflow"
+
+permissions:
+  contents: write               # para que el bot pueda commitear los datos
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: pip install requests pandas python-dotenv pyarrow tqdm
+
+      - name: Correr ETL + exportar datos web
+        env:
+          EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+        run: |
+          rm -rf data/raw
+          python etl.py
+          python export_web.py
+
+      - name: Commit y push de datos
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --staged --quiet || git commit -m "chore: refresco semanal de datos EIA"
+          git push
