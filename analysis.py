@@ -1,243 +1,372 @@
-"""
-Permian Basin Analytics — Análisis
-==================================
-Gemelo US-facing de Vaca Muerta Analytics, con la misma arquitectura.
-Corre sobre data/processed/permian.csv (salida de etl.py) y produce KPIs
-por consola, un resumen en JSON y cuatro figuras en charts/.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Permian Basin — Production Analytics</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+<style>
+  :root{
+    --canvas:#f4f6f8; --card:#fff; --border:#e2e7ec; --ink:#1a2733; --muted:#64707c;
+    --navy:#16324f; --oil:#c47d1a; --gas:#0d7d7d; --decline:#b3261e; --pos:#0d7d3f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--canvas);color:var(--ink);
+    font-family:Inter,system-ui,sans-serif;font-size:14px;line-height:1.5}
+  .mono{font-family:"IBM Plex Mono",monospace}
+  .wrap{max-width:1320px;margin:0 auto;padding:0 clamp(12px,2.5vw,24px)}
 
-Flujo
------
-    cargar()                       Lee el tablero procesado.
-    separar_historico_pronostico() Divide dato real vs. pronóstico del STEO.
-    kpis()                         Métricas del último mes real (+ variación i/a).
-    graf_*()                       Cuatro lecturas del sistema (ver más abajo).
-    guardar_kpis()                 Persiste charts/_kpis.json (trazabilidad).
+  header{background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+  header .in{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:12px 0;flex-wrap:wrap}
+  header img{height:30px;width:auto;display:block}
+  .live{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);
+    display:flex;align-items:center;gap:8px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--pos);animation:pulse 2.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(13,125,63,.5)}70%{box-shadow:0 0 0 7px rgba(13,125,63,0)}100%{box-shadow:0 0 0 0 rgba(13,125,63,0)}}
 
-Salida
-------
-    charts/01_petroleo.png      Producción de petróleo (crudo + tight).
-    charts/02_eficiencia.png    Rigs vs. producción (la historia de eficiencia).
-    charts/03_declinacion.png   Pozos nuevos (+) vs. declinación de base (−).
-    charts/04_ducs.png          Inventario de DUCs y ritmo perforación/completación.
-    charts/_kpis.json           KPIs del último mes real.
+  /* toolbar */
+  .toolbar{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-end;
+    padding:16px 0 6px}
+  .ctrl label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--muted);font-weight:600;margin-bottom:6px}
+  select{font:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--border);
+    border-radius:7px;background:#fff;color:var(--ink);cursor:pointer;min-width:88px}
+  select:focus{outline:2px solid var(--navy);outline-offset:1px}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:7px;overflow:hidden;background:#fff}
+  .seg button{font:inherit;font-size:13px;padding:7px 14px;border:0;background:#fff;color:var(--muted);cursor:pointer}
+  .seg button.on{background:var(--navy);color:#fff;font-weight:600}
+  .seg button:focus-visible{outline:2px solid var(--navy);outline-offset:-2px}
+  .chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);cursor:pointer;padding-bottom:7px}
+  .chk input{width:16px;height:16px;accent-color:var(--navy);cursor:pointer}
 
-Nota de dominio
----------------
-A nivel cuenca (STEO) NO hay curvas de declinación por pozo (Arps): la
-declinación aparece agregada en `existing_oil_change` (caída de la base),
-compensada por `newwell_oil_prod`. El análisis por pozo (Arps, water cut,
-GOR) es la v2, con datos de Texas RRC / New Mexico OCD.
+  /* KPI cards */
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:16px 0 20px}
+  @media(max-width:1000px){.kpis{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 15px;
+    border-left:3px solid var(--navy)}
+  .kpi.oil{border-left-color:var(--oil)}.kpi.gas{border-left-color:var(--gas)}
+  .kpi .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+  .kpi .v{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:27px;line-height:1.05;margin:7px 0 3px}
+  .kpi .u{font-size:11px;color:var(--muted)}
+  .kpi .y{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;margin-top:8px;
+    display:inline-block;padding:2px 7px;border-radius:20px}
+  .y.up{color:var(--pos);background:rgba(13,125,63,.10)}
+  .y.down{color:var(--decline);background:rgba(179,38,30,.10)}
+  .y.flat{color:var(--muted);background:#eef1f4}
 
-Uso
----
-    python etl.py                          # genera data/processed/permian.csv
-    pip install pandas numpy matplotlib
-    python analysis.py
-"""
+  /* chart grid */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding-bottom:20px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 14px 6px}
+  .panel .h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:2px}
+  .panel h3{font-family:Archivo,sans-serif;font-size:15px;margin:0;color:var(--navy)}
+  .panel .sub{font-size:12px;color:var(--muted)}
+  .panel.wide{grid-column:1 / -1}
+  .chart{width:100%;height:300px}
+  .chart.tall{height:360px}
 
-from __future__ import annotations
+  footer{border-top:1px solid var(--border);color:var(--muted);font-size:12px;padding:18px 0 40px;line-height:1.7}
+  footer b{color:var(--ink)} footer a{color:var(--navy)}
+  footer .sig{display:flex;align-items:center;gap:10px;margin-top:12px}
+  footer .sig img{height:26px}
+  .pagenav{background:#16324f;border-bottom:1px solid rgba(255,255,255,.08)}
+  .pagenav .wrap{display:flex;gap:4px}
+  .pagenav a{font-family:Inter,sans-serif;font-size:13px;font-weight:600;color:#9fb3c4;
+    text-decoration:none;padding:11px 16px;border-bottom:2px solid transparent}
+  .pagenav a:hover{color:#fff}
+  .pagenav a.active{color:#fff;border-bottom-color:#c47d1a}
+  .hero{padding:24px 0 4px}
+  .hero h1{font-family:Archivo,sans-serif;color:var(--navy);font-size:clamp(23px,3.3vw,33px);line-height:1.08;margin:0 0 8px;letter-spacing:-.01em}
+  .hero .lede{max-width:74ch;color:var(--muted);font-size:15px;margin:0}
+  .hero .lede b{color:var(--ink);font-weight:600}
 
-import json
-import logging
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Optional
-
-import numpy as np
-import pandas as pd
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-
-# ─── CONFIGURACIÓN ───────────────────────────────────────────────────────────
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s  %(levelname)-8s  %(message)s",
-    datefmt="%H:%M:%S",
-)
-log = logging.getLogger(__name__)
-
-DATA   = Path("data/processed/permian.csv")
-CHARTS = Path("charts")
-
-plt.rcParams.update({
-    "figure.figsize": (10, 5), "axes.grid": True,
-    "grid.alpha": 0.3, "font.size": 11,
-})
-
-# Paleta de marca (coherente con el dashboard: petróleo ámbar, gas/datos petróleo, base rojo)
-NAVY, AMBER, TEAL, RED = "#1f3a5f", "#b45309", "#0d7d7d", "#b3261e"
-
-# KPIs a reportar: columna → (etiqueta, decimales)
-KPIS: dict[str, tuple[str, int]] = {
-    "crude_oil_prod":      ("Crude oil (M bbl/d)", 2),
-    "tight_oil_prod":      ("Tight oil (M bbl/d)", 2),
-    "shale_gas_prod":      ("Shale gas (Bcf/d)", 1),
-    "active_rigs":         ("Rigs activos", 0),
-    "new_wells_drilled":   ("Pozos perforados/mes", 0),
-    "new_wells_completed": ("Pozos completados/mes", 0),
-    "ducs":                ("DUCs (inventario real)", 0),
-    "newwell_oil_prod":    ("Prod. petróleo pozos nuevos (k bbl/d)", 0),
-    "existing_oil_change": ("Cambio de base petróleo (k bbl/d)", 0),
-    "net_oil_change":      ("Neto: nuevos + base (k bbl/d)", 0),
-}
-
-# ─── CARGA Y PREPARACIÓN ─────────────────────────────────────────────────────
-
-def cargar() -> pd.DataFrame:
-    """Lee el tablero procesado y lo devuelve ordenado por período."""
-    if not DATA.exists():
-        raise SystemExit(f"No existe {DATA}. Corré etl.py primero.")
-    df = pd.read_csv(DATA, parse_dates=["period"]).sort_values("period").reset_index(drop=True)
-    log.info("Cargadas %d filas (%s → %s)", len(df),
-             df["period"].min().strftime("%Y-%m"),
-             df["period"].max().strftime("%Y-%m"))
-    return df
-
-
-def separar_historico_pronostico(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.Timestamp]:
-    """Divide el tablero en (histórico, pronóstico, último_mes_real).
-
-    El último mes real es el último con rigs cargados: la actividad de
-    perforación no se pronostica, pero la producción del STEO sí.
-    """
-    if "active_rigs" in df.columns and df["active_rigs"].notna().any():
-        ultimo_real = df.loc[df["active_rigs"].notna(), "period"].max()
-    else:
-        ultimo_real = df["period"].max()
-    hist = df[df["period"] <= ultimo_real].copy()
-    fcst = df[df["period"] > ultimo_real].copy()
-    return hist, fcst, ultimo_real
+  /* mapa de contexto + trazabilidad */
+  .map-panel svg{width:100%;height:auto;display:block;max-height:300px}
+  .note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6;max-width:92ch}
+  .note b{color:var(--ink)}
+  .trace{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:6px}
+  @media(max-width:760px){.trace{grid-template-columns:repeat(2,1fr)}}
+  .trace .t{background:var(--canvas);border:1px solid var(--border);border-radius:8px;padding:9px 12px}
+  .trace .t .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+  .trace .t .val{font-family:"IBM Plex Mono",monospace;font-size:15px;color:var(--ink);margin-top:4px}
+</style>
+</head>
+<body>
+  <nav class="pagenav"><div class="wrap">
+    <a href="index.html" class="active">Dashboard</a>
+    <a href="briefing.html">Briefing</a>
+  </div></nav>
 
 
-def _yoy(serie: pd.Series) -> float:
-    """Variación interanual (12 meses) del último dato disponible."""
-    s = serie.dropna()
-    if len(s) < 13:
-        return float("nan")
-    return (s.iloc[-1] / s.iloc[-13] - 1) * 100
+<header><div class="wrap in">
+  <img src="logo-primary.svg" alt="Claudio Butassi — Energy & Data Analytics">
+  <span class="live"><span class="dot"></span>EIA STEO · actual through <b class="mono" id="updated" style="color:var(--ink)">—</b></span>
+</div></header>
 
-# ─── KPIs ────────────────────────────────────────────────────────────────────
+<div class="wrap">
 
-def kpis(hist: pd.DataFrame, ultimo_real: pd.Timestamp) -> dict:
-    """Registra y devuelve los KPIs del último mes real, con variación i/a."""
-    log.info("KPIs — último mes real: %s", ultimo_real.strftime("%Y-%m"))
-    resumen: dict[str, dict] = {}
-    for col, (label, dec) in KPIS.items():
-        if col in hist.columns and hist[col].notna().any():
-            valor = float(hist[col].dropna().iloc[-1])
-            chg = _yoy(hist[col])
-            chg_txt = f"{chg:+.1f}% i/a" if pd.notna(chg) else "s/d"
-            log.info("  %-40s %12.1f   (%s)", label, valor, chg_txt)
-            resumen[col] = {"label": label, "valor": round(valor, dec),
-                            "yoy_pct": None if pd.isna(chg) else round(chg, 1)}
-    return resumen
+  <section class="hero">
+    <h1>Permian Basin — Production Analytics</h1>
+    <p class="lede">The basin behind roughly <b>48% of U.S. crude oil</b> — tracked monthly from official EIA data: production and decline, rig-vs-output efficiency, new-well additions, and drilled-but-uncompleted (DUC) inventory.</p>
+  </section>
 
-# ─── GRÁFICOS ────────────────────────────────────────────────────────────────
+  <div class="toolbar">
+    <div class="ctrl"><label for="from">From</label><select id="from"></select></div>
+    <div class="ctrl"><label for="to">To</label><select id="to"></select></div>
+    <div class="ctrl"><label>Production series</label>
+      <div class="seg" id="prodseg">
+        <button data-v="oil" class="on">Oil</button>
+        <button data-v="gas">Gas</button>
+        <button data-v="both">Both</button>
+      </div>
+    </div>
+    <label class="chk"><input type="checkbox" id="fc" checked> Show forecast</label>
+  </div>
 
-def _sombrear_pronostico(ax, ultimo_real: pd.Timestamp, df: pd.DataFrame) -> None:
-    """Sombrea la franja de pronóstico (posterior al último mes real)."""
-    if df["period"].max() > ultimo_real:
-        ax.axvspan(ultimo_real, df["period"].max(), color="grey", alpha=0.08)
-        ax.axvline(ultimo_real, color="grey", ls="--", lw=1)
+  <section class="kpis" id="kpis"></section>
 
+  <section class="grid">
+    <div class="panel wide map-panel">
+      <div class="h"><h3>Where the Permian is — location &amp; sub-basins</h3><span class="sub">Schematic reference · not to scale</span></div>
+      <svg viewBox="0 0 720 300" role="img" aria-label="Esquema de la cuenca Permian: sub-cuencas Delaware y Midland en el oeste de Texas y sudeste de Nuevo Mexico">
+        <path d="M300 12 L262 296" fill="none" stroke="#64707c" stroke-width="1.4" stroke-dasharray="6 5"/>
+        <text x="60" y="34" font-family="Archivo,sans-serif" font-size="13" font-weight="700" fill="#64707c" letter-spacing="1">NEW MEXICO</text>
+        <text x="662" y="34" text-anchor="end" font-family="Archivo,sans-serif" font-size="13" font-weight="700" fill="#64707c" letter-spacing="1">TEXAS</text>
+        <ellipse cx="225" cy="165" rx="135" ry="92" fill="#c47d1a" fill-opacity="0.12" stroke="#c47d1a" stroke-width="2"/>
+        <text x="205" y="160" text-anchor="middle" font-family="Archivo,sans-serif" font-size="16" font-weight="800" fill="#8a560f">Delaware</text>
+        <text x="205" y="180" text-anchor="middle" font-family="Archivo,sans-serif" font-size="16" font-weight="800" fill="#8a560f">Basin</text>
+        <ellipse cx="378" cy="168" rx="32" ry="76" fill="#16324f" fill-opacity="0.07" stroke="#16324f" stroke-width="1.1" stroke-dasharray="3 3"/>
+        <text x="378" y="264" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" fill="#64707c">Central Basin</text>
+        <text x="378" y="277" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" fill="#64707c">Platform</text>
+        <ellipse cx="522" cy="170" rx="120" ry="82" fill="#0d7d7d" fill-opacity="0.12" stroke="#0d7d7d" stroke-width="2"/>
+        <text x="540" y="166" text-anchor="middle" font-family="Archivo,sans-serif" font-size="16" font-weight="800" fill="#0a5f5f">Midland</text>
+        <text x="540" y="186" text-anchor="middle" font-family="Archivo,sans-serif" font-size="16" font-weight="800" fill="#0a5f5f">Basin</text>
+        <g font-family="Inter,sans-serif" font-size="11" fill="#1a2733">
+          <circle cx="150" cy="108" r="3.5" fill="#16324f"/><text x="159" y="112">Carlsbad</text>
+          <circle cx="500" cy="212" r="3.5" fill="#16324f"/><text x="509" y="216">Midland–Odessa</text>
+        </g>
+        <text x="710" y="292" text-anchor="end" font-family="Inter,sans-serif" font-size="10" fill="#94a0a8">Esquemático · no a escala</text>
+      </svg>
+      <p class="note">The Permian spans West Texas and southeastern New Mexico, split into the <b>Delaware</b> and <b>Midland</b> sub-basins. This dashboard uses <b>basin-level aggregates</b> (EIA STEO); individual well locations and operator-level detail are not part of this dataset.</p>
+    </div>
+    <div class="panel wide">
+      <div class="h"><h3 id="prod-title">Crude &amp; tight oil production</h3><span class="sub">Hover for exact monthly values · drag the slider to zoom</span></div>
+      <div id="c-prod" class="chart tall"></div>
+    </div>
+    <div class="panel">
+      <div class="h"><h3>Efficiency: rigs vs. output</h3><span class="sub">Rigs (left) · crude (right) — fewer rigs, more output</span></div>
+      <div id="c-eff" class="chart"></div>
+    </div>
+    <div class="panel">
+      <div class="h"><h3>New wells vs. base decline</h3><span class="sub">Additions (+) · decline (−) · net</span></div>
+      <div id="c-eng" class="chart"></div>
+    </div>
+    <div class="panel wide">
+      <div class="h"><h3>Drilled-but-uncompleted inventory</h3><span class="sub">DUCs (left) · drilling &amp; completion pace (right)</span></div>
+      <div id="c-duc" class="chart"></div>
+    </div>
+    <div class="panel wide">
+      <div class="h"><h3>Production economics: price vs. drilling</h3><span class="sub">WTI spot (left) · active rigs (right) · Permian breakeven band shaded — as price nears breakeven, drilling cools</span></div>
+      <div id="c-econ" class="chart"></div>
+    </div>
+  </section>
 
-def graf_petroleo(df: pd.DataFrame, ultimo_real: pd.Timestamp) -> None:
-    """Producción de crudo y tight oil de la cuenca."""
-    if "crude_oil_prod" not in df.columns:
-        return
-    fig, ax = plt.subplots()
-    ax.plot(df["period"], df["crude_oil_prod"], color=NAVY, lw=2.2, label="Crude oil (M bbl/d)")
-    if "tight_oil_prod" in df.columns:
-        ax.plot(df["period"], df["tight_oil_prod"], color=TEAL, lw=1.3, ls="--", label="Tight oil (M bbl/d)")
-    _sombrear_pronostico(ax, ultimo_real, df)
-    ax.set_ylabel("Millones bbl/día"); ax.legend(loc="upper left")
-    ax.set_title("Permian — Producción de petróleo (zona gris = pronóstico)")
-    fig.tight_layout(); fig.savefig(CHARTS / "01_petroleo.png", dpi=120); plt.close(fig)
+  <section class="panel wide" style="margin:0 0 22px">
+    <div class="h"><h3>Data &amp; traceability</h3><span class="sub">Every figure is generated automatically from official data</span></div>
+    <div class="trace">
+      <div class="t"><div class="k">Source</div><div class="val" style="font-size:13px">EIA STEO · API v2</div></div>
+      <div class="t"><div class="k">Cadence</div><div class="val" style="font-size:13px">Monthly</div></div>
+      <div class="t"><div class="k">Coverage</div><div class="val" id="tr-cov">—</div></div>
+      <div class="t"><div class="k">Latest actual</div><div class="val" id="tr-upd">—</div></div>
+      <div class="t"><div class="k">Data series</div><div class="val" id="tr-series">—</div></div>
+      <div class="t"><div class="k">Monthly rows</div><div class="val" id="tr-rows">—</div></div>
+      <div class="t"><div class="k">Refresh</div><div class="val" style="font-size:13px">Weekly (CI)</div></div>
+      <div class="t"><div class="k">Granularity</div><div class="val" style="font-size:13px">Basin / region</div></div>
+    </div>
+    <p class="note">Values after the latest actual month are EIA forecasts (shaded in the charts). Pipeline: Python ETL → automated weekly on GitHub Actions → <a href="https://github.com/chavobutassi/permian-analytics">source on GitHub</a>.</p>
+  </section>
 
+  <footer>
+    <b>Source:</b> U.S. Energy Information Administration — Short-Term Energy Outlook (STEO), via EIA API v2. Monthly, basin/region granularity; values past the latest actual month are EIA forecasts (shaded). Crude &amp; tight oil in million bbl/day; new-well and base-change series in thousand bbl/day; gas in Bcf/day. WTI spot price in US$/bbl (EIA STEO); Permian breakeven from the Dallas Fed Energy Survey. Built with Python (automated ETL) and Plotly.
+    <div class="sig"><img src="logo-primary.svg" alt="Claudio Butassi"><span class="mono">Claudio Butassi · Energy &amp; Data Analytics · github.com/chavobutassi</span></div>
+  </footer>
+</div>
 
-def graf_eficiencia(df: pd.DataFrame, ultimo_real: pd.Timestamp) -> None:
-    """Rigs vs. producción: más barriles con menos equipos."""
-    if "active_rigs" not in df.columns:
-        return
-    fig, ax1 = plt.subplots()
-    ax1.plot(df["period"], df["active_rigs"], color=NAVY, lw=2, label="Rigs activos")
-    ax1.set_ylabel("Rigs activos", color=NAVY)
-    if "crude_oil_prod" in df.columns:
-        ax2 = ax1.twinx()
-        ax2.plot(df["period"], df["crude_oil_prod"], color=AMBER, lw=2, label="Crude oil")
-        ax2.set_ylabel("Crude oil (M bbl/d)", color=AMBER)
-    _sombrear_pronostico(ax1, ultimo_real, df)
-    ax1.set_title("Permian — Más producción con menos rigs (eficiencia)")
-    fig.tight_layout(); fig.savefig(CHARTS / "02_eficiencia.png", dpi=120); plt.close(fig)
+<script src="data.js"></script>
+<script>
+(function(){
+  if(!window.PERMIAN){document.getElementById('kpis').innerHTML='<p>data.js not found — run export_web.py.</p>';return;}
+  var rows=window.PERMIAN.rows, upd=window.PERMIAN.updated;
+  var allX=rows.map(function(r){return r.period;});
+  var idxHist=upd?allX.indexOf(upd):allX.length-1; if(idxHist<0)idxHist=allX.length-1;
+  var years=[]; rows.forEach(function(r){var y=+r.period.slice(0,4); if(years.indexOf(y)<0)years.push(y);});
+  years.sort();
+  var state={from:years[0], to:years[years.length-1], prod:'oil', fc:true};
 
+  var NAVY='#16324f',OIL='#c47d1a',GAS='#0d7d7d',DEC='#b3261e';
+  var cfg={displayModeBar:false,responsive:true};
 
-def graf_declinacion(df: pd.DataFrame, ultimo_real: pd.Timestamp) -> None:
-    """La historia central del shale: pozos nuevos (+) vs. caída de la base (−)."""
-    if not {"newwell_oil_prod", "existing_oil_change"} <= set(df.columns):
-        return
-    fig, ax = plt.subplots()
-    ax.bar(df["period"], df["newwell_oil_prod"], width=20, color=TEAL, label="Pozos nuevos (+)")
-    ax.bar(df["period"], df["existing_oil_change"], width=20, color=RED, label="Declinación base (−)")
-    if "net_oil_change" in df.columns:
-        ax.plot(df["period"], df["net_oil_change"], color=NAVY, lw=2, label="Neto")
-    ax.axhline(0, color="black", lw=0.8)
-    _sombrear_pronostico(ax, ultimo_real, df)
-    ax.set_ylabel("Miles bbl/día"); ax.legend(loc="upper left")
-    ax.set_title("Permian — Pozos nuevos vs. declinación de la base (petróleo)")
-    fig.tight_layout(); fig.savefig(CHARTS / "03_declinacion.png", dpi=120); plt.close(fig)
+  function num(v,d){return (v==null||isNaN(v))?'—':Number(v).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});}
+  function set(id,t){var e=document.getElementById(id);if(e)e.textContent=t;}
+  function lastHist(k){for(var i=idxHist;i>=0;i--){if(rows[i][k]!=null)return{v:rows[i][k],i:i};}return{v:null,i:-1};}
+  function yoyv(k){var l=lastHist(k);if(l.i<12||rows[l.i-12][k]==null)return null;return (l.v/rows[l.i-12][k]-1)*100;}
 
+  // ---- KPI strip (latest actual) ----
+  set('updated', upd?upd.slice(0,7):'—');
+  var defs=[
+    {k:'crude_oil_prod',l:'Crude oil',u:'M bbl/d',d:2,c:'oil'},
+    {k:'tight_oil_prod',l:'Tight oil',u:'M bbl/d',d:2,c:'oil'},
+    {k:'shale_gas_prod',l:'Shale gas',u:'Bcf/d',d:1,c:'gas'},
+    {k:'active_rigs',l:'Active rigs',u:'count',d:0,c:''},
+    {k:'ducs',l:'DUC inventory',u:'wells',d:0,c:''},
+    {k:'net_oil_change',l:'Net oil change',u:'k bbl/d',d:0,c:'oil'}
+  ];
+  document.getElementById('kpis').innerHTML=defs.map(function(dd){
+    var l=lastHist(dd.k),y=yoyv(dd.k);
+    var cls=y==null?'flat':(y>0.05?'up':(y<-0.05?'down':'flat'));
+    var yt=y==null?'—':(y>0?'▲ ':(y<0?'▼ ':''))+Math.abs(y).toFixed(1)+'% y/y';
+    return '<div class="kpi '+dd.c+'"><div class="l">'+dd.l+'</div>'+
+      '<div class="v">'+num(l.v,dd.d)+'</div><div class="u">'+dd.u+'</div>'+
+      '<div class="y '+cls+'">'+yt+'</div></div>';
+  }).join('');
 
-def graf_ducs(df: pd.DataFrame, ultimo_real: pd.Timestamp) -> None:
-    """Inventario de DUCs junto al ritmo de perforación y completación."""
-    if "ducs" not in df.columns:
-        return
-    fig, ax1 = plt.subplots()
-    ax1.plot(df["period"], df["ducs"], color=TEAL, lw=2, label="DUCs (inventario)")
-    ax1.set_ylabel("DUCs", color=TEAL)
-    if {"new_wells_drilled", "new_wells_completed"} <= set(df.columns):
-        ax2 = ax1.twinx()
-        ax2.plot(df["period"], df["new_wells_drilled"], color=NAVY, lw=1.2, label="Perforados")
-        ax2.plot(df["period"], df["new_wells_completed"], color=AMBER, lw=1.2, label="Completados")
-        ax2.set_ylabel("Pozos/mes")
-    _sombrear_pronostico(ax1, ultimo_real, df)
-    ax1.set_title("Permian — Inventario de DUCs y ritmo de perforación/completación")
-    fig.tight_layout(); fig.savefig(CHARTS / "04_ducs.png", dpi=120); plt.close(fig)
+  // ---- filtered view ----
+  function view(){
+    return rows.filter(function(r){
+      var y=+r.period.slice(0,4);
+      if(y<state.from||y>state.to)return false;
+      if(!state.fc && r.period>upd)return false;
+      return true;
+    });
+  }
+  function X(v){return v.map(function(r){return r.period;});}
+  function C(v,k){return v.map(function(r){return (r[k]==null?null:r[k]);});}
 
-# ─── PERSISTENCIA ────────────────────────────────────────────────────────────
+  function fcShapes(vx){
+    if(!(state.fc && upd && vx.length && vx[vx.length-1]>upd && vx[0]<=upd))return [];
+    return [
+      {type:'rect',xref:'x',yref:'paper',x0:upd,x1:vx[vx.length-1],y0:0,y1:1,fillcolor:'#8a97a3',opacity:0.09,line:{width:0}},
+      {type:'line',xref:'x',yref:'paper',x0:upd,x1:upd,y0:0,y1:1,line:{color:'#8a97a3',width:1,dash:'dot'}}
+    ];
+  }
+  function fcAnn(vx){
+    if(!(state.fc && upd && vx.length && vx[vx.length-1]>upd && vx[0]<=upd))return [];
+    return [{x:upd,y:1,xref:'x',yref:'paper',text:'forecast →',showarrow:false,xanchor:'left',yanchor:'top',
+      font:{size:10,color:'#8a97a3',family:'IBM Plex Mono,monospace'}}];
+  }
+  function baseLayout(vx,yTitle,extra){
+    return Object.assign({
+      margin:{l:56,r:56,t:16,b:30}, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+      font:{family:'IBM Plex Mono,monospace',size:11,color:'#3a4652'},
+      legend:{orientation:'h',y:1.16,x:0,font:{size:11,family:'Inter,sans-serif'}},
+      hovermode:'x unified', hoverlabel:{font:{family:'IBM Plex Mono,monospace',size:12},bgcolor:'#fff',bordercolor:'#e2e7ec'},
+      xaxis:{gridcolor:'#eaeef2',zeroline:false},
+      yaxis:{title:{text:yTitle,font:{size:11}},gridcolor:'#eaeef2',zeroline:false},
+      shapes:fcShapes(vx), annotations:fcAnn(vx)
+    },extra||{});
+  }
+  var HT=function(unit,d){return '%{y:.'+d+'f} '+unit+'<extra>%{fullData.name}</extra>';};
 
-def guardar_kpis(resumen: dict, ultimo_real: pd.Timestamp) -> None:
-    """Escribe charts/_kpis.json con los KPIs del último mes real (trazabilidad)."""
-    payload = {
-        "generado_en": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "ultimo_mes_real": ultimo_real.strftime("%Y-%m"),
-        "kpis": resumen,
+  function renderProd(){
+    var v=view(), vx=X(v), data, y2=false, ytitle;
+    if(state.prod==='oil'){
+      ytitle='Million bbl/day';
+      data=[
+        {x:vx,y:C(v,'crude_oil_prod'),name:'Crude oil',mode:'lines',line:{color:NAVY,width:2.4},connectgaps:false,hovertemplate:HT('M bbl/d',2)},
+        {x:vx,y:C(v,'tight_oil_prod'),name:'Tight oil',mode:'lines',line:{color:OIL,width:1.6,dash:'dash'},connectgaps:false,hovertemplate:HT('M bbl/d',2)}
+      ];
+      set('prod-title','Crude & tight oil production');
+    }else if(state.prod==='gas'){
+      ytitle='Bcf/day';
+      data=[
+        {x:vx,y:C(v,'shale_gas_prod'),name:'Shale gas',mode:'lines',line:{color:GAS,width:2.4},connectgaps:false,hovertemplate:HT('Bcf/d',1)},
+        {x:vx,y:C(v,'gas_marketed_prod'),name:'Gas marketed',mode:'lines',line:{color:'#5aa0a0',width:1.6,dash:'dash'},connectgaps:false,hovertemplate:HT('Bcf/d',1)}
+      ];
+      set('prod-title','Shale & marketed gas production');
+    }else{
+      ytitle='Crude (M bbl/d)'; y2=true;
+      data=[
+        {x:vx,y:C(v,'crude_oil_prod'),name:'Crude oil',mode:'lines',line:{color:NAVY,width:2.4},connectgaps:false,hovertemplate:HT('M bbl/d',2)},
+        {x:vx,y:C(v,'shale_gas_prod'),name:'Shale gas',yaxis:'y2',mode:'lines',line:{color:GAS,width:2},connectgaps:false,hovertemplate:HT('Bcf/d',1)}
+      ];
+      set('prod-title','Oil vs. gas production');
     }
-    (CHARTS / "_kpis.json").write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-    log.info("  + charts/_kpis.json")
+    var extra={xaxis:{gridcolor:'#eaeef2',zeroline:false,rangeslider:{visible:true,thickness:0.08,bgcolor:'#f4f6f8'}}};
+    if(y2)extra.yaxis2={title:{text:'Gas (Bcf/d)',font:{size:11}},overlaying:'y',side:'right',gridcolor:'rgba(0,0,0,0)',zeroline:false};
+    Plotly.react('c-prod',data,baseLayout(vx,ytitle,extra),cfg);
+  }
 
-# ─── ORQUESTACIÓN ────────────────────────────────────────────────────────────
+  function renderEff(){
+    var v=view(),vx=X(v);
+    Plotly.react('c-eff',[
+      {x:vx,y:C(v,'active_rigs'),name:'Active rigs',mode:'lines',line:{color:NAVY,width:2},connectgaps:false,hovertemplate:HT('rigs',0)},
+      {x:vx,y:C(v,'crude_oil_prod'),name:'Crude oil',yaxis:'y2',mode:'lines',line:{color:OIL,width:2},connectgaps:false,hovertemplate:HT('M bbl/d',2)}
+    ],baseLayout(vx,'Active rigs',{yaxis2:{title:{text:'Crude (M bbl/d)',font:{size:11}},overlaying:'y',side:'right',gridcolor:'rgba(0,0,0,0)',zeroline:false}}),cfg);
+  }
+  function renderEng(){
+    var v=view(),vx=X(v);
+    Plotly.react('c-eng',[
+      {x:vx,y:C(v,'newwell_oil_prod'),name:'New wells (+)',type:'bar',marker:{color:GAS},hovertemplate:HT('k bbl/d',0)},
+      {x:vx,y:C(v,'existing_oil_change'),name:'Base decline (−)',type:'bar',marker:{color:DEC},hovertemplate:HT('k bbl/d',0)},
+      {x:vx,y:C(v,'net_oil_change'),name:'Net',mode:'lines',line:{color:NAVY,width:2},hovertemplate:HT('k bbl/d',0)}
+    ],baseLayout(vx,'Thousand bbl/day',{barmode:'relative'}),cfg);
+  }
+  function renderDuc(){
+    var v=view(),vx=X(v);
+    Plotly.react('c-duc',[
+      {x:vx,y:C(v,'ducs'),name:'DUC inventory',mode:'lines',line:{color:GAS,width:2.2},connectgaps:false,hovertemplate:HT('wells',0)},
+      {x:vx,y:C(v,'new_wells_drilled'),name:'Drilled',yaxis:'y2',mode:'lines',line:{color:NAVY,width:1.3},connectgaps:false,hovertemplate:HT('/mo',0)},
+      {x:vx,y:C(v,'new_wells_completed'),name:'Completed',yaxis:'y2',mode:'lines',line:{color:OIL,width:1.3},connectgaps:false,hovertemplate:HT('/mo',0)}
+    ],baseLayout(vx,'DUC wells',{yaxis2:{title:{text:'Wells / month',font:{size:11}},overlaying:'y',side:'right',gridcolor:'rgba(0,0,0,0)',zeroline:false}}),cfg);
+  }
+  function renderEcon(){
+    var v=view(),vx=X(v);
+    var lay=baseLayout(vx,'WTI ($/bbl)',{yaxis2:{title:{text:'Active rigs',font:{size:11}},overlaying:'y',side:'right',gridcolor:'rgba(0,0,0,0)',zeroline:false}});
+    lay.shapes=(lay.shapes||[]).concat([
+      {type:'rect',xref:'paper',yref:'y',x0:0,x1:1,y0:61,y1:62,fillcolor:DEC,opacity:0.10,line:{width:0}},
+      {type:'line',xref:'paper',yref:'y',x0:0,x1:1,y0:61.5,y1:61.5,line:{color:DEC,width:1,dash:'dot'}}
+    ]);
+    lay.annotations=(lay.annotations||[]).concat([
+      {x:0,y:62,xref:'paper',yref:'y',xanchor:'left',yanchor:'bottom',text:'Permian breakeven ≈ $61–62 (Dallas Fed)',showarrow:false,font:{size:10,color:DEC,family:'IBM Plex Mono,monospace'}}
+    ]);
+    Plotly.react('c-econ',[
+      {x:vx,y:C(v,'wti'),name:'WTI spot',mode:'lines',line:{color:NAVY,width:2.4},connectgaps:false,hovertemplate:HT('$/bbl',0)},
+      {x:vx,y:C(v,'active_rigs'),name:'Active rigs',yaxis:'y2',mode:'lines',line:{color:OIL,width:1.6},connectgaps:false,hovertemplate:HT('rigs',0)}
+    ],lay,cfg);
+  }
+  function renderAll(){renderProd();renderEff();renderEng();renderDuc();renderEcon();}
 
-def main() -> None:
-    CHARTS.mkdir(exist_ok=True)
-    df = cargar()
-    hist, fcst, ultimo_real = separar_historico_pronostico(df)
-    log.info("Histórico hasta %s; %d meses de pronóstico.",
-             ultimo_real.strftime("%Y-%m"), len(fcst))
+  // ---- controls ----
+  var selFrom=document.getElementById('from'), selTo=document.getElementById('to');
+  years.forEach(function(y){
+    selFrom.insertAdjacentHTML('beforeend','<option value="'+y+'">'+y+'</option>');
+    selTo.insertAdjacentHTML('beforeend','<option value="'+y+'">'+y+'</option>');
+  });
+  selFrom.value=state.from; selTo.value=state.to;
+  selFrom.onchange=function(){state.from=+this.value; if(state.from>state.to){state.to=state.from;selTo.value=state.to;} renderAll();};
+  selTo.onchange=function(){state.to=+this.value; if(state.to<state.from){state.from=state.to;selFrom.value=state.from;} renderAll();};
+  document.getElementById('fc').onchange=function(){state.fc=this.checked;renderAll();};
+  Array.prototype.forEach.call(document.querySelectorAll('#prodseg button'),function(btn){
+    btn.onclick=function(){
+      Array.prototype.forEach.call(document.querySelectorAll('#prodseg button'),function(b){b.classList.remove('on');});
+      btn.classList.add('on'); state.prod=btn.getAttribute('data-v'); renderProd();
+    };
+  });
 
-    resumen = kpis(hist, ultimo_real)
+  // ---- traceability panel ----
+  set('tr-cov', allX.length ? (allX[0].slice(0,7)+' → '+allX[allX.length-1].slice(0,7)) : '—');
+  set('tr-upd', upd ? upd.slice(0,7) : '—');
+  set('tr-series', rows.length ? String(Object.keys(rows[0]).filter(function(k){return k!=='period';}).length) : '—');
+  set('tr-rows', String(rows.length));
 
-    graf_petroleo(df, ultimo_real)
-    graf_eficiencia(df, ultimo_real)
-    graf_declinacion(df, ultimo_real)
-    graf_ducs(df, ultimo_real)
-    guardar_kpis(resumen, ultimo_real)
-
-    log.info("Listo. Figuras en charts/: 01_petroleo, 02_eficiencia, 03_declinacion, 04_ducs.")
-
-
-if __name__ == "__main__":
-    main()
+  renderAll();
+})();
+</script>
+</body>
+</html>
