@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Permian Wells — Real Footprint</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+<style>
+  :root{--canvas:#f4f6f8;--card:#fff;--border:#e2e7ec;--ink:#1a2733;--muted:#64707c;
+    --navy:#16324f;--oil:#c47d1a;--gas:#0d7d7d;--pos:#0d7d3f}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--canvas);color:var(--ink);font-family:Inter,system-ui,sans-serif;font-size:14px;line-height:1.5}
+  .mono{font-family:"IBM Plex Mono",monospace}
+  .wrap{max-width:1320px;margin:0 auto;padding:0 clamp(12px,2.5vw,24px)}
+  .pagenav{background:#16324f}
+  .pagenav .wrap{display:flex;gap:4px}
+  .pagenav a{font-family:Inter,sans-serif;font-size:13px;font-weight:600;color:#9fb3c4;text-decoration:none;padding:11px 16px;border-bottom:2px solid transparent}
+  .pagenav a:hover{color:#fff}.pagenav a.active{color:#fff;border-bottom-color:#c47d1a}
+  header{background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+  header .in{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;flex-wrap:wrap}
+  header img{height:30px;width:auto;display:block}
+  .live{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--pos)}
+  .hero{padding:24px 0 4px}
+  .hero h1{font-family:Archivo,sans-serif;color:var(--navy);font-size:clamp(23px,3.3vw,33px);margin:0 0 8px;letter-spacing:-.01em}
+  .hero .lede{max-width:78ch;color:var(--muted);font-size:15px;margin:0}.hero .lede b{color:var(--ink);font-weight:600}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0 20px}
+  @media(max-width:640px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 15px;border-left:3px solid var(--oil)}
+  .kpi .l{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+  .kpi .v{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:26px;margin:7px 0 2px}
+  .kpi .u{font-size:11px;color:var(--muted)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding-bottom:20px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 14px 8px}
+  .panel.wide{grid-column:1 / -1}
+  .panel h3{font-family:Archivo,sans-serif;font-size:15px;margin:0 0 2px;color:var(--navy)}
+  .panel .sub{font-size:12px;color:var(--muted);margin-bottom:6px}
+  .chart{width:100%;height:300px}.chart.tall{height:460px}
+  .note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6;max-width:94ch}.note b{color:var(--ink)}
+  footer{border-top:1px solid var(--border);color:var(--muted);font-size:12px;padding:18px 0 40px;line-height:1.7}
+  footer .sig{display:flex;align-items:center;gap:10px;margin-top:12px}footer .sig img{height:26px}
+</style>
+</head>
+<body>
+  <nav class="pagenav"><div class="wrap">
+    <a href="index.html">Dashboard</a>
+    <a href="briefing.html">Briefing</a>
+    <a href="wells.html" class="active">Wells map</a>
+  </div></nav>
+
+  <header><div class="wrap in">
+    <img src="logo-primary.svg" alt="Claudio Butassi — Energy & Data Analytics">
+    <span class="live"><span class="dot"></span>FracFocus · <b class="mono" id="live-n" style="color:var(--ink)">—</b> wells</span>
+  </div></header>
+
+  <div class="wrap">
+    <section class="hero">
+      <h1>Permian Wells — the real footprint</h1>
+      <p class="lede">Every hydraulically-fractured well disclosed in the Permian Basin — <b id="h-n">—</b> wells with real coordinates, mapped by density, ranked by operator. Source: the public <b>FracFocus</b> chemical-disclosure registry.</p>
+    </section>
+
+    <section class="kpis" id="kpis"></section>
+
+    <section class="panel wide">
+      <h3>Well density across the basin</h3>
+      <div class="sub">Every disclosed well, binned to a ~5 km grid · hover for well counts · zoom and pan</div>
+      <div id="c-map" class="chart tall"></div>
+    </section>
+
+    <section class="grid">
+      <div class="panel">
+        <h3>Top operators</h3><div class="sub">By number of fractured wells</div>
+        <div id="c-ops" class="chart"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h3>Wells fractured per year</h3></div><div class="sub">Drilling-completion activity over time</div>
+        <div id="c-year" class="chart"></div>
+      </div>
+      <div class="panel wide">
+        <h3>Wells by county</h3><div class="sub">Where activity concentrates — Texas &amp; New Mexico</div>
+        <div id="c-county" class="chart"></div>
+      </div>
+    </section>
+
+    <div class="note" id="note"></div>
+
+    <footer>
+      <b>Source:</b> FracFocus chemical-disclosure registry (public). Each record is a hydraulically-fractured well with real surface coordinates, operator, county and job date. This view is <b>well count and location</b>, not production volume; per-well production and decline curves come from state regulators (Texas RRC / New Mexico OCD) in a later phase. Built with Python (automated ETL) and Plotly.
+      <div class="sig"><img src="logo-primary.svg" alt="Claudio Butassi"><span class="mono">Claudio Butassi · Energy &amp; Data Analytics · github.com/chavobutassi</span></div>
+    </footer>
+  </div>
+
+<script src="wells_web.js"></script>
+<script>
+(function(){
+  var D = window.PERMIAN_WELLS;
+  if(!D){document.getElementById('kpis').innerHTML='<p>wells_web.js not found — run etl_v2.py.</p>';return;}
+  var NAVY='#16324f',OIL='#c47d1a',GAS='#0d7d7d',INK='#1a2733';
+  var cfg={displayModeBar:false,responsive:true};
+  function n(v){return v==null?'—':Number(v).toLocaleString('en-US');}
+  function set(id,t){var e=document.getElementById(id);if(e)e.textContent=t;}
+
+  set('live-n', n(D.kpis.total_wells)); set('h-n', n(D.kpis.total_wells));
+
+  var kp=[
+    {l:'Wells',v:n(D.kpis.total_wells),u:'fractured, disclosed'},
+    {l:'Operators',v:n(D.kpis.operators),u:'companies'},
+    {l:'Counties',v:n(D.kpis.counties),u:'TX + NM'},
+    {l:'Period',v:D.kpis.first_year+'–'+D.kpis.last_year,u:'disclosure years'}
+  ];
+  document.getElementById('kpis').innerHTML=kp.map(function(x){
+    return '<div class="kpi"><div class="l">'+x.l+'</div><div class="v">'+x.v+'</div><div class="u">'+x.u+'</div></div>';
+  }).join('');
+
+  // ---- density map ----
+  var g=D.grid;
+  Plotly.newPlot('c-map',[{
+    type:'densitymapbox',
+    lat:g.map(function(c){return c.lat;}),
+    lon:g.map(function(c){return c.lon;}),
+    z:g.map(function(c){return c.n;}),
+    radius:12,
+    colorscale:[[0,'#eaf1f0'],[0.35,'#7fb2ad'],[0.7,'#c47d1a'],[1,'#7a3e00']],
+    colorbar:{title:{text:'wells / cell',font:{size:11}},thickness:12},
+    hovertemplate:'%{z} wells<extra></extra>'
+  }],{
+    margin:{l:0,r:0,t:0,b:0},
+    mapbox:{style:'carto-positron',center:{lat:D.center.lat,lon:D.center.lon},zoom:5.6},
+    font:{family:'IBM Plex Mono,monospace',size:11}
+  },cfg);
+
+  // ---- top operators ----
+  var ops=D.top_operators.slice(0,10).slice().reverse();
+  Plotly.newPlot('c-ops',[{
+    type:'bar',orientation:'h',
+    y:ops.map(function(o){return o.operator.length>26?o.operator.slice(0,26)+'…':o.operator;}),
+    x:ops.map(function(o){return o.wells;}),
+    marker:{color:NAVY},hovertemplate:'%{x:,} wells<extra>%{y}</extra>'
+  }],{margin:{l:180,r:16,t:8,b:28},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',
+     font:{family:'IBM Plex Mono,monospace',size:11,color:'#3a4652'},
+     xaxis:{gridcolor:'#eaeef2',title:{text:'wells',font:{size:11}}},yaxis:{automargin:true}},cfg);
+
+  // ---- wells per year ----
+  var by=D.by_year;
+  Plotly.newPlot('c-year',[{
+    type:'bar',x:by.map(function(r){return r.year;}),y:by.map(function(r){return r.wells;}),
+    marker:{color:OIL},hovertemplate:'%{y:,} wells<extra>%{x}</extra>'
+  }],{margin:{l:52,r:16,t:8,b:30},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',
+     font:{family:'IBM Plex Mono,monospace',size:11,color:'#3a4652'},
+     xaxis:{gridcolor:'#eaeef2'},yaxis:{gridcolor:'#eaeef2',title:{text:'wells / year',font:{size:11}}}},cfg);
+
+  // ---- by county ----
+  var co=D.by_county.slice(0,10).slice().reverse();
+  Plotly.newPlot('c-county',[{
+    type:'bar',orientation:'h',
+    y:co.map(function(r){return r.county+' ('+(r.state==='Texas'?'TX':'NM')+')';}),
+    x:co.map(function(r){return r.wells;}),
+    marker:{color:GAS},hovertemplate:'%{x:,} wells<extra>%{y}</extra>'
+  }],{margin:{l:140,r:16,t:8,b:28},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',
+     font:{family:'IBM Plex Mono,monospace',size:11,color:'#3a4652'},
+     xaxis:{gridcolor:'#eaeef2',title:{text:'wells',font:{size:11}}},yaxis:{automargin:true}},cfg);
+
+  document.getElementById('note').innerHTML =
+    'The map bins all '+n(D.kpis.total_wells)+' wells into ~5 km cells, so it shows the true drilling footprint rather than a sample. '+
+    '<b>What this proves:</b> a repeatable pipeline turning a large public dataset into a verifiable map and operator ranking — location and activity, not production.';
+})();
+</script>
+</body>
+</html>
