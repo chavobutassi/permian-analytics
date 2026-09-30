@@ -36,9 +36,13 @@
   @media(max-width:900px){.grid{grid-template-columns:1fr}}
   .panel{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 14px 8px}
   .panel.wide{grid-column:1 / -1}
+  .panel .ph{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
   .panel h3{font-family:Archivo,sans-serif;font-size:15px;margin:0 0 2px;color:var(--navy)}
   .panel .sub{font-size:12px;color:var(--muted);margin-bottom:6px}
   .chart{width:100%;height:300px}.chart.tall{height:460px}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:7px;overflow:hidden;background:#fff}
+  .seg button{font:inherit;font-size:12.5px;padding:6px 12px;border:0;background:#fff;color:var(--muted);cursor:pointer}
+  .seg button.on{background:var(--navy);color:#fff;font-weight:600}
   .note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6;max-width:94ch}.note b{color:var(--ink)}
   footer{border-top:1px solid var(--border);color:var(--muted);font-size:12px;padding:18px 0 40px;line-height:1.7}
   footer .sig{display:flex;align-items:center;gap:10px;margin-top:12px}footer .sig img{height:26px}
@@ -65,8 +69,17 @@
     <section class="kpis" id="kpis"></section>
 
     <section class="panel wide">
-      <h3>Well density across the basin</h3>
-      <div class="sub">Every disclosed well, binned to a ~5 km grid · hover for well counts · zoom and pan</div>
+      <div class="ph">
+        <div>
+          <h3>Well density across the basin</h3>
+          <div class="sub">Every disclosed well, binned to a ~5 km grid · hover for well counts · zoom and pan</div>
+        </div>
+        <div class="seg" id="baseseg" role="group" aria-label="Basemap">
+          <button data-b="light" class="on">Light</button>
+          <button data-b="satellite">Satellite</button>
+          <button data-b="hybrid">Hybrid</button>
+        </div>
+      </div>
       <div id="c-map" class="chart tall"></div>
     </section>
 
@@ -76,7 +89,7 @@
         <div id="c-ops" class="chart"></div>
       </div>
       <div class="panel">
-        <div class="panel-h"><h3>Wells fractured per year</h3></div><div class="sub">Drilling-completion activity over time</div>
+        <h3>Wells fractured per year</h3><div class="sub">Drilling-completion activity over time</div>
         <div id="c-year" class="chart"></div>
       </div>
       <div class="panel wide">
@@ -88,7 +101,7 @@
     <div class="note" id="note"></div>
 
     <footer>
-      <b>Source:</b> FracFocus chemical-disclosure registry (public). Each record is a hydraulically-fractured well with real surface coordinates, operator, county and job date. This view is <b>well count and location</b>, not production volume; per-well production and decline curves come from state regulators (Texas RRC / New Mexico OCD) in a later phase. Built with Python (automated ETL) and Plotly.
+      <b>Source:</b> FracFocus chemical-disclosure registry (public). Each record is a hydraulically-fractured well with real surface coordinates, operator, county and job date. This view is <b>well count and location</b>, not production volume; per-well production and decline curves come from state regulators (Texas RRC / New Mexico OCD) in a later phase. Satellite imagery © Esri, Maxar, Earthstar Geographics. Built with Python (automated ETL) and Plotly.
       <div class="sig"><img src="logo-primary.svg" alt="Claudio Butassi"><span class="mono">Claudio Butassi · Energy &amp; Data Analytics · github.com/chavobutassi</span></div>
     </footer>
   </div>
@@ -98,7 +111,7 @@
 (function(){
   var D = window.PERMIAN_WELLS;
   if(!D){document.getElementById('kpis').innerHTML='<p>wells_web.js not found — run etl_v2.py.</p>';return;}
-  var NAVY='#16324f',OIL='#c47d1a',GAS='#0d7d7d',INK='#1a2733';
+  var NAVY='#16324f',OIL='#c47d1a',GAS='#0d7d7d';
   var cfg={displayModeBar:false,responsive:true};
   function n(v){return v==null?'—':Number(v).toLocaleString('en-US');}
   function set(id,t){var e=document.getElementById(id);if(e)e.textContent=t;}
@@ -115,22 +128,44 @@
     return '<div class="kpi"><div class="l">'+x.l+'</div><div class="v">'+x.v+'</div><div class="u">'+x.u+'</div></div>';
   }).join('');
 
+  // ---- basemaps (Esri raster tiles, no token needed) ----
+  var ESRI_IMG='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+  var ESRI_REF='https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
+  var BASEMAPS={
+    light:{style:'carto-positron',layers:[]},
+    satellite:{style:'white-bg',layers:[{sourcetype:'raster',source:[ESRI_IMG],below:'traces'}]},
+    hybrid:{style:'white-bg',layers:[
+      {sourcetype:'raster',source:[ESRI_IMG],below:'traces'},
+      {sourcetype:'raster',source:[ESRI_REF],below:'traces'}]}
+  };
+
   // ---- density map ----
   var g=D.grid;
-  Plotly.newPlot('c-map',[{
+  var mapData=[{
     type:'densitymapbox',
     lat:g.map(function(c){return c.lat;}),
     lon:g.map(function(c){return c.lon;}),
     z:g.map(function(c){return c.n;}),
     radius:12,
-    colorscale:[[0,'#eaf1f0'],[0.35,'#7fb2ad'],[0.7,'#c47d1a'],[1,'#7a3e00']],
+    colorscale:[[0,'rgba(13,125,125,0)'],[0.25,'rgba(13,125,125,0.55)'],[0.6,'rgba(196,125,26,0.85)'],[1,'rgba(122,62,0,0.96)']],
     colorbar:{title:{text:'wells / cell',font:{size:11}},thickness:12},
     hovertemplate:'%{z} wells<extra></extra>'
-  }],{
-    margin:{l:0,r:0,t:0,b:0},
-    mapbox:{style:'carto-positron',center:{lat:D.center.lat,lon:D.center.lon},zoom:5.6},
-    font:{family:'IBM Plex Mono,monospace',size:11}
-  },cfg);
+  }];
+  function mapLayout(bm){
+    return {margin:{l:0,r:0,t:0,b:0},
+      mapbox:{style:bm.style,layers:bm.layers,center:{lat:D.center.lat,lon:D.center.lon},zoom:5.6},
+      font:{family:'IBM Plex Mono,monospace',size:11}};
+  }
+  Plotly.newPlot('c-map',mapData,mapLayout(BASEMAPS.light),cfg);
+
+  Array.prototype.forEach.call(document.querySelectorAll('#baseseg button'),function(btn){
+    btn.onclick=function(){
+      Array.prototype.forEach.call(document.querySelectorAll('#baseseg button'),function(b){b.classList.remove('on');});
+      btn.classList.add('on');
+      var bm=BASEMAPS[btn.getAttribute('data-b')];
+      Plotly.relayout('c-map',{'mapbox.style':bm.style,'mapbox.layers':bm.layers});
+    };
+  });
 
   // ---- top operators ----
   var ops=D.top_operators.slice(0,10).slice().reverse();
@@ -165,6 +200,7 @@
 
   document.getElementById('note').innerHTML =
     'The map bins all '+n(D.kpis.total_wells)+' wells into ~5 km cells, so it shows the true drilling footprint rather than a sample. '+
+    'Switch the basemap to <b>Satellite</b> or <b>Hybrid</b> to see the wells over real terrain. '+
     '<b>What this proves:</b> a repeatable pipeline turning a large public dataset into a verifiable map and operator ranking — location and activity, not production.';
 })();
 </script>
