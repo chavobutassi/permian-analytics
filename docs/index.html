@@ -85,22 +85,13 @@
   .hero h1{font-family:Archivo,sans-serif;color:var(--navy);font-size:clamp(23px,3.3vw,33px);line-height:1.08;margin:0 0 8px;letter-spacing:-.01em}
   .hero .lede{max-width:74ch;color:var(--muted);font-size:15px;margin:0}
   .hero .lede b{color:var(--ink);font-weight:600}
-
-  /* mapa de contexto + trazabilidad */
-  .map-panel svg{width:100%;height:auto;display:block;max-height:300px}
-  .note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6;max-width:92ch}
-  .note b{color:var(--ink)}
-  .trace{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:6px}
-  @media(max-width:760px){.trace{grid-template-columns:repeat(2,1fr)}}
-  .trace .t{background:var(--canvas);border:1px solid var(--border);border-radius:8px;padding:9px 12px}
-  .trace .t .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
-  .trace .t .val{font-family:"IBM Plex Mono",monospace;font-size:15px;color:var(--ink);margin-top:4px}
 </style>
 </head>
 <body>
   <nav class="pagenav"><div class="wrap">
     <a href="index.html" class="active">Dashboard</a>
     <a href="briefing.html">Briefing</a>
+    <a href="wells.html">Wells map</a>
   </div></nav>
 
 
@@ -132,29 +123,6 @@
   <section class="kpis" id="kpis"></section>
 
   <section class="grid">
-    <div class="panel wide map-panel">
-      <div class="h"><h3>Where the Permian is — location &amp; sub-basins</h3><span class="sub">Schematic reference · not to scale</span></div>
-      <svg viewBox="0 0 720 300" role="img" aria-label="Esquema de la cuenca Permian: sub-cuencas Delaware y Midland en el oeste de Texas y sudeste de Nuevo Mexico">
-        <path d="M300 12 L262 296" fill="none" stroke="#64707c" stroke-width="1.4" stroke-dasharray="6 5"/>
-        <text x="60" y="34" font-family="Archivo,sans-serif" font-size="13" font-weight="700" fill="#64707c" letter-spacing="1">NEW MEXICO</text>
-        <text x="662" y="34" text-anchor="end" font-family="Archivo,sans-serif" font-size="13" font-weight="700" fill="#64707c" letter-spacing="1">TEXAS</text>
-        <ellipse cx="225" cy="165" rx="135" ry="92" fill="#c47d1a" fill-opacity="0.12" stroke="#c47d1a" stroke-width="2"/>
-        <text x="205" y="160" text-anchor="middle" font-family="Archivo,sans-serif" font-size="16" font-weight="800" fill="#8a560f">Delaware</text>
-        <text x="205" y="180" text-anchor="middle" font-family="Archivo,sans-serif" font-size="16" font-weight="800" fill="#8a560f">Basin</text>
-        <ellipse cx="378" cy="168" rx="32" ry="76" fill="#16324f" fill-opacity="0.07" stroke="#16324f" stroke-width="1.1" stroke-dasharray="3 3"/>
-        <text x="378" y="264" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" fill="#64707c">Central Basin</text>
-        <text x="378" y="277" text-anchor="middle" font-family="Inter,sans-serif" font-size="10.5" fill="#64707c">Platform</text>
-        <ellipse cx="522" cy="170" rx="120" ry="82" fill="#0d7d7d" fill-opacity="0.12" stroke="#0d7d7d" stroke-width="2"/>
-        <text x="540" y="166" text-anchor="middle" font-family="Archivo,sans-serif" font-size="16" font-weight="800" fill="#0a5f5f">Midland</text>
-        <text x="540" y="186" text-anchor="middle" font-family="Archivo,sans-serif" font-size="16" font-weight="800" fill="#0a5f5f">Basin</text>
-        <g font-family="Inter,sans-serif" font-size="11" fill="#1a2733">
-          <circle cx="150" cy="108" r="3.5" fill="#16324f"/><text x="159" y="112">Carlsbad</text>
-          <circle cx="500" cy="212" r="3.5" fill="#16324f"/><text x="509" y="216">Midland–Odessa</text>
-        </g>
-        <text x="710" y="292" text-anchor="end" font-family="Inter,sans-serif" font-size="10" fill="#94a0a8">Esquemático · no a escala</text>
-      </svg>
-      <p class="note">The Permian spans West Texas and southeastern New Mexico, split into the <b>Delaware</b> and <b>Midland</b> sub-basins. This dashboard uses <b>basin-level aggregates</b> (EIA STEO); individual well locations and operator-level detail are not part of this dataset.</p>
-    </div>
     <div class="panel wide">
       <div class="h"><h3 id="prod-title">Crude &amp; tight oil production</h3><span class="sub">Hover for exact monthly values · drag the slider to zoom</span></div>
       <div id="c-prod" class="chart tall"></div>
@@ -175,21 +143,6 @@
       <div class="h"><h3>Production economics: price vs. drilling</h3><span class="sub">WTI spot (left) · active rigs (right) · Permian breakeven band shaded — as price nears breakeven, drilling cools</span></div>
       <div id="c-econ" class="chart"></div>
     </div>
-  </section>
-
-  <section class="panel wide" style="margin:0 0 22px">
-    <div class="h"><h3>Data &amp; traceability</h3><span class="sub">Every figure is generated automatically from official data</span></div>
-    <div class="trace">
-      <div class="t"><div class="k">Source</div><div class="val" style="font-size:13px">EIA STEO · API v2</div></div>
-      <div class="t"><div class="k">Cadence</div><div class="val" style="font-size:13px">Monthly</div></div>
-      <div class="t"><div class="k">Coverage</div><div class="val" id="tr-cov">—</div></div>
-      <div class="t"><div class="k">Latest actual</div><div class="val" id="tr-upd">—</div></div>
-      <div class="t"><div class="k">Data series</div><div class="val" id="tr-series">—</div></div>
-      <div class="t"><div class="k">Monthly rows</div><div class="val" id="tr-rows">—</div></div>
-      <div class="t"><div class="k">Refresh</div><div class="val" style="font-size:13px">Weekly (CI)</div></div>
-      <div class="t"><div class="k">Granularity</div><div class="val" style="font-size:13px">Basin / region</div></div>
-    </div>
-    <p class="note">Values after the latest actual month are EIA forecasts (shaded in the charts). Pipeline: Python ETL → automated weekly on GitHub Actions → <a href="https://github.com/chavobutassi/permian-analytics">source on GitHub</a>.</p>
   </section>
 
   <footer>
@@ -358,12 +311,6 @@
       btn.classList.add('on'); state.prod=btn.getAttribute('data-v'); renderProd();
     };
   });
-
-  // ---- traceability panel ----
-  set('tr-cov', allX.length ? (allX[0].slice(0,7)+' → '+allX[allX.length-1].slice(0,7)) : '—');
-  set('tr-upd', upd ? upd.slice(0,7) : '—');
-  set('tr-series', rows.length ? String(Object.keys(rows[0]).filter(function(k){return k!=='period';}).length) : '—');
-  set('tr-rows', String(rows.length));
 
   renderAll();
 })();
