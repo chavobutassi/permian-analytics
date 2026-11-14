@@ -10,9 +10,13 @@
 
 ## Why this matters for the United States
 
-Energy independence and the resilience of critical infrastructure are national priorities for the United States. The Permian Basin, spanning West Texas and New Mexico, is the single most important contributor to that goal: its shale and tight formations produce roughly **6 million barrels of crude oil per day — about 44% of total U.S. crude output** (EIA Short-Term Energy Outlook).
+Energy is one of the **16 critical-infrastructure sectors** identified by the U.S. Cybersecurity and Infrastructure Security Agency (CISA) — a sector whose reliability underpins nearly every other. The Permian Basin, spanning West Texas and New Mexico, is its single largest contributor: its shale and tight formations produce roughly **6 million barrels of crude oil per day — about 44% of total U.S. crude output** (EIA Short-Term Energy Outlook).
 
-Faster, more transparent, and reproducible production analytics support better decisions on resource allocation, transport capacity, and supply continuity — benefits that extend well beyond any single operator. This project demonstrates that capability end to end: it ingests official production data, models basin dynamics, and publishes an automatically refreshed dashboard, using the same public datasets that operators, regulators, and analysts rely on.
+Keeping critical-infrastructure data **ingested, validated, and visualized reproducibly** — with no manual steps and a clear trail back to the source — is what lets operators, regulators, and analysts make faster, better-informed decisions on resource allocation, transport capacity, and supply continuity. This project demonstrates that capability end to end on a critical-infrastructure dataset: it pulls official data straight from the EIA API, models basin dynamics, validates the series, and publishes an automatically refreshed dashboard.
+
+### Relevance to my proposed endeavor
+
+This project is a public demonstration of the data methods behind my proposed U.S. endeavor: **organizing large external datasets, checking their consistency, and presenting the results through accessible, decision-ready interfaces**, refreshed automatically and traceable to the source. The subject here is energy production, but the pipeline itself — ingest → validate → visualize, on a schedule — is the same one I apply to operational-readiness and asset/resource data for the infrastructure operators, security providers, and field-service organizations my endeavor serves. Its companion project, [Vaca Muerta Analytics](https://github.com/chavobutassi/vaca-muerta-analytics), carries the same approach further into explicit asset-register and model (IFC) data validation.
 
 ## What it does
 
