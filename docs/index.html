@@ -104,7 +104,7 @@
 
   <section class="hero">
     <h1>Permian Basin — Production Analytics</h1>
-    <p class="lede">The basin behind roughly <b>48% of U.S. crude oil</b> — tracked monthly from official EIA data: production and decline, rig-vs-output efficiency, new-well additions, and drilled-but-uncompleted (DUC) inventory.</p>
+    <p class="lede">The basin behind roughly <b><span id="share">48</span>% of U.S. crude oil</b> — tracked monthly from official EIA data: production and decline, rig-vs-output efficiency, new-well additions, and drilled-but-uncompleted (DUC) inventory.</p>
   </section>
 
   <div class="toolbar">
@@ -172,6 +172,7 @@
 
   // ---- KPI strip (latest actual) ----
   set('updated', upd?upd.slice(0,7):'—');
+  if(window.PERMIAN.share_pct!=null) set('share', window.PERMIAN.share_pct);
   var defs=[
     {k:'crude_oil_prod',l:'Crude oil',u:'M bbl/d',d:2,c:'oil'},
     {k:'tight_oil_prod',l:'Tight oil',u:'M bbl/d',d:2,c:'oil'},

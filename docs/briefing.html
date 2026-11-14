@@ -117,7 +117,7 @@
 <section class="hero"><div class="wrap">
   <p class="kicker">Energy Intelligence Briefing</p>
   <h1 class="display">America's oil engine doesn't idle.</h1>
-  <p class="lede">The Permian Basin produces about <b id="h-crude">6.6</b> million barrels of crude a day — roughly <b>48% of all U.S. crude</b>. This briefing reads that number the way a data analyst would: not as a single figure, but as a system you can watch, question, and draw conclusions from — chart by chart.</p>
+  <p class="lede">The Permian Basin produces about <b id="h-crude">6.6</b> million barrels of crude a day — roughly <b><span id="share">48</span>% of all U.S. crude</b>. This briefing reads that number the way a data analyst would: not as a single figure, but as a system you can watch, question, and draw conclusions from — chart by chart.</p>
   <div class="herofig">
     <div id="c-hero" class="chart" style="height:clamp(280px,44vw,320px)"></div>
     <div class="cap">Permian crude oil production, monthly. Shaded region = EIA forecast.</div>
@@ -133,7 +133,7 @@
     <div class="stat">
       <div><div class="v" id="s-crude">—</div><div class="l">Crude oil · M bbl/d</div></div>
       <div><div class="v" id="s-tight">—</div><div class="l">Tight oil · M bbl/d</div></div>
-      <div><div class="v">~48%</div><div class="l">of U.S. crude (EIA)</div></div>
+      <div><div class="v">~<span id="share2">48</span>%</div><div class="l">of U.S. crude (EIA)</div></div>
     </div>
     <figure><div id="c-oil" class="chart"></div>
       <figcaption>Regional crude and tight-oil production. Forecast shaded.</figcaption></figure>
@@ -231,6 +231,7 @@
 
   set('b-updated', upd?upd.slice(0,7):'—');
   set('h-crude', num(crude.v,1));
+  if(window.PERMIAN.share_pct!=null){ set('share', window.PERMIAN.share_pct); set('share2', window.PERMIAN.share_pct); }
   set('s-crude', num(crude.v,2)); set('s-tight', num(tight.v,2));
   set('s-rigs', num(rigs.v,0)); set('s-ducs', num(duc.v,0)); set('s-drilled', num(dr.v,0)); set('s-completed', num(cp.v,0));
   set('s-newwell', num(nw.v,0)); set('s-decline', num(dec.v,0)); set('s-net', num(net.v,0));

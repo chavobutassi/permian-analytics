@@ -72,6 +72,7 @@ CARPETA_OUTPUT = Path("data/processed")
 SERIES: dict[str, str] = {
     # Producción — petróleo
     "COPRPM":  "crude_oil_prod",       # Crude Oil Production: Permian (región, headline)
+    "COPRPUS": "us_crude_prod",        # U.S. Crude Oil Production (total nacional, para el % de la cuenca)
     "TOPRPM":  "tight_oil_prod",       # Tight oil (formaciones Permian)
     # Producción — gas
     "SNGPRPM": "shale_gas_prod",       # Shale natural gas (formaciones Permian)
@@ -103,7 +104,7 @@ SERIES: dict[str, str] = {
 #   Rigs, pozos, DUCs      → conteos
 #   WTI                    → US$/bbl
 UNIDADES: dict[str, str] = {
-    "crude_oil_prod": "M bbl/d", "tight_oil_prod": "M bbl/d",
+    "crude_oil_prod": "M bbl/d", "us_crude_prod": "M bbl/d", "tight_oil_prod": "M bbl/d",
     "shale_gas_prod": "Bcf/d",   "gas_marketed_prod": "Bcf/d",
     "active_rigs": "rigs", "new_wells_drilled": "pozos/mes",
     "new_wells_completed": "pozos/mes", "wells_drilled_per_rig": "pozos/rig",

@@ -10,7 +10,7 @@
 
 ## Why this matters for the United States
 
-Energy is one of the **16 critical-infrastructure sectors** identified by the U.S. Cybersecurity and Infrastructure Security Agency (CISA) — a sector whose reliability underpins nearly every other. The Permian Basin, spanning West Texas and New Mexico, is its single largest contributor: its shale and tight formations produce roughly **6 million barrels of crude oil per day — about 44% of total U.S. crude output** (EIA Short-Term Energy Outlook).
+Energy is one of the **16 critical-infrastructure sectors** identified by the U.S. Cybersecurity and Infrastructure Security Agency (CISA) — a sector whose reliability underpins nearly every other. The Permian Basin, spanning West Texas and New Mexico, is its single largest contributor: its shale and tight formations produce roughly **<!--CRUDE-->6.9<!--/CRUDE--> million barrels of crude oil per day — about <!--SHARE_PCT-->49<!--/SHARE_PCT-->% of total U.S. crude output** (EIA Short-Term Energy Outlook). This figure is **recomputed from EIA data on every weekly refresh** (Permian crude ÷ total U.S. crude), so it tracks the basin's real share over time rather than a fixed number.
 
 Keeping critical-infrastructure data **ingested, validated, and visualized reproducibly** — with no manual steps and a clear trail back to the source — is what lets operators, regulators, and analysts make faster, better-informed decisions on resource allocation, transport capacity, and supply continuity. This project demonstrates that capability end to end on a critical-infrastructure dataset: it pulls official data straight from the EIA API, models basin dynamics, validates the series, and publishes an automatically refreshed dashboard.
 
