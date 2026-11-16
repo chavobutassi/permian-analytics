@@ -34,6 +34,7 @@ from __future__ import annotations
 import os
 import sys
 import json
+import time
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
@@ -66,6 +67,13 @@ START = "2014-01"                      # el shale de la Permian despega ~2014
 
 CARPETA_CACHE  = Path("data/raw")
 CARPETA_OUTPUT = Path("data/processed")
+UMBRAL_OBSOLETO_DIAS = 10              # si los datos superan esto sin refresco, se alerta
+INTENTOS = 4                           # reintentos de la API de la EIA
+HEADERS = {                            # UA de navegador: algunos WAF cortan el de requests
+    "User-Agent": ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                   "(KHTML, like Gecko) Chrome/125.0 Safari/537.36"),
+    "Accept": "application/json,*/*",
+}
 
 # ─── SERIES DE LA PERMIAN (EIA STEO) ─────────────────────────────────────────
 # clave = seriesId de la EIA ; valor = nombre de columna legible.
@@ -143,9 +151,24 @@ def _fetch_serie(series_id: str, columna: str) -> pd.DataFrame:
             "sort[0][direction]": "asc",
             "length": 5000,
         }
-        r = requests.get(f"{BASE}/{RUTA}/", params=params, timeout=30)
-        r.raise_for_status()
-        payload = r.json()
+        payload = None
+        ultimo_error: Optional[Exception] = None
+        for intento in range(1, INTENTOS + 1):
+            try:
+                r = requests.get(f"{BASE}/{RUTA}/", params=params,
+                                 timeout=(20, 120), headers=HEADERS)
+                r.raise_for_status()
+                payload = r.json()
+                break
+            except requests.RequestException as e:
+                ultimo_error = e
+                log.info("  · %s intento %d/%d falló (%s)", series_id, intento,
+                         INTENTOS, type(e).__name__)
+                if intento < INTENTOS:
+                    time.sleep(10 * intento)
+        if payload is None:
+            raise requests.RequestException(
+                f"EIA no respondió para {series_id}: {ultimo_error}")
         cache.write_text(json.dumps(payload))
 
     filas = payload.get("response", {}).get("data", [])
@@ -158,15 +181,52 @@ def _fetch_serie(series_id: str, columna: str) -> pd.DataFrame:
     return df
 
 
+def _salir_segun_antiguedad() -> None:
+    """Decide el código de salida cuando la EIA no respondió.
+
+    Sale 0 (silencioso; el dashboard sigue con los últimos datos buenos) si el
+    último refresco exitoso es reciente; sale 1 (la corrida queda en rojo y
+    GitHub avisa) si los datos ya superan UMBRAL_OBSOLETO_DIAS días. Así una
+    caída puntual de la API no dispara falsas alarmas, pero un atraso real sí.
+    """
+    meta = CARPETA_OUTPUT / "_metadata.json"
+    try:
+        ts = json.loads(meta.read_text(encoding="utf-8")).get("generado_en")
+        ultimo = datetime.fromisoformat(ts)
+        if ultimo.tzinfo is None:
+            ultimo = ultimo.replace(tzinfo=timezone.utc)
+        edad = (datetime.now(timezone.utc) - ultimo).days
+    except Exception as exc:
+        log.error("⛔ No se pudo leer la antigüedad de los datos (%s): se alerta por las dudas.", exc)
+        sys.exit(1)
+    if edad >= UMBRAL_OBSOLETO_DIAS:
+        log.error("⛔ Datos obsoletos: %d días sin refresco exitoso (umbral %d). "
+                  "Se falla a propósito para alertar.", edad, UMBRAL_OBSOLETO_DIAS)
+        sys.exit(1)
+    log.warning("EIA no disponible, pero los datos tienen %d día(s) (< %d): "
+                "se conservan y la corrida termina OK.", edad, UMBRAL_OBSOLETO_DIAS)
+    sys.exit(0)
+
+
 def extraer() -> pd.DataFrame:
-    """Descarga y une todas las series de SERIES en un tablero ancho por período."""
+    """Descarga y une todas las series de SERIES en un tablero ancho por período.
+
+    Si la EIA no responde (tras los reintentos de _fetch_serie), no se escribe
+    un tablero parcial: se conservan los datos publicados y se decide alertar
+    según su antigüedad.
+    """
     log.info("EXTRACCIÓN — %d series del STEO Permian (%s → hoy)", len(SERIES), START)
     tablero: Optional[pd.DataFrame] = None
     for sid, col in tqdm(SERIES.items(), desc="Series", unit="serie"):
-        df = _fetch_serie(sid, col)
+        try:
+            df = _fetch_serie(sid, col)
+        except requests.RequestException as e:
+            log.warning("No se pudo traer la serie %s: %s", sid, e)
+            _salir_segun_antiguedad()          # conserva datos; sale 0 o 1 según antigüedad
         tablero = df if tablero is None else tablero.merge(df, on="period", how="outer")
     if tablero is None or tablero.empty:
-        sys.exit("No se obtuvo ninguna serie; abortando.")
+        log.warning("Extracción vacía desde la EIA.")
+        _salir_segun_antiguedad()
     return tablero.sort_values("period").reset_index(drop=True)
 
 # ─── TRANSFORMACIÓN ──────────────────────────────────────────────────────────
