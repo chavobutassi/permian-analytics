@@ -1,13 +1,14 @@
 {
-  "generado_en": "2026-11-09T21:50:16+00:00",
+  "generado_en": "2026-11-16T13:55:02+00:00",
   "fuente": "EIA API v2 — Short-Term Energy Outlook (STEO)",
-  "series": 16,
+  "series": 17,
   "filas": 168,
   "periodo_min": "2014-01",
   "periodo_max": "2027-12",
-  "ultimo_mes_real": "2026-09",
+  "ultimo_mes_real": "2026-10",
   "unidades": {
     "crude_oil_prod": "M bbl/d",
+    "us_crude_prod": "M bbl/d",
     "tight_oil_prod": "M bbl/d",
     "shale_gas_prod": "Bcf/d",
     "gas_marketed_prod": "Bcf/d",
@@ -34,25 +35,34 @@
       "cobertura_pct": 100.0,
       "nulos": 0,
       "min": 1.497,
-      "max": 7.308
+      "max": 7.317
+    },
+    {
+      "columna": "us_crude_prod",
+      "unidad": "M bbl/d",
+      "filas": 168,
+      "cobertura_pct": 100.0,
+      "nulos": 0,
+      "min": 8.072,
+      "max": 14.552
     },
     {
       "columna": "tight_oil_prod",
       "unidad": "M bbl/d",
-      "filas": 153,
-      "cobertura_pct": 91.1,
-      "nulos": 15,
+      "filas": 154,
+      "cobertura_pct": 91.7,
+      "nulos": 14,
       "min": 0.649,
-      "max": 6.173
+      "max": 6.18
     },
     {
       "columna": "shale_gas_prod",
       "unidad": "Bcf/d",
-      "filas": 153,
-      "cobertura_pct": 91.1,
-      "nulos": 15,
+      "filas": 154,
+      "cobertura_pct": 91.7,
+      "nulos": 14,
       "min": 1.711,
-      "max": 23.453
+      "max": 24.691
     },
     {
       "columna": "gas_marketed_prod",
@@ -61,106 +71,106 @@
       "cobertura_pct": 100.0,
       "nulos": 0,
       "min": 4.824,
-      "max": 33.492
+      "max": 33.642
     },
     {
       "columna": "active_rigs",
       "unidad": "rigs",
-      "filas": 153,
-      "cobertura_pct": 91.1,
-      "nulos": 15,
+      "filas": 154,
+      "cobertura_pct": 91.7,
+      "nulos": 14,
       "min": 122.75,
       "max": 565.0
     },
     {
       "columna": "new_wells_drilled",
       "unidad": "pozos/mes",
-      "filas": 153,
-      "cobertura_pct": 91.1,
-      "nulos": 15,
+      "filas": 154,
+      "cobertura_pct": 91.7,
+      "nulos": 14,
       "min": 151.0,
-      "max": 720.0
+      "max": 722.0
     },
     {
       "columna": "new_wells_completed",
       "unidad": "pozos/mes",
-      "filas": 153,
-      "cobertura_pct": 91.1,
-      "nulos": 15,
+      "filas": 154,
+      "cobertura_pct": 91.7,
+      "nulos": 14,
       "min": 84.0,
       "max": 671.0
     },
     {
       "columna": "wells_drilled_per_rig",
       "unidad": "pozos/rig",
-      "filas": 153,
-      "cobertura_pct": 91.1,
-      "nulos": 15,
+      "filas": 154,
+      "cobertura_pct": 91.7,
+      "nulos": 14,
       "min": 1.041,
-      "max": 1.883
+      "max": 1.897
     },
     {
       "columna": "ducs",
       "unidad": "pozos",
-      "filas": 153,
-      "cobertura_pct": 91.1,
-      "nulos": 15,
+      "filas": 154,
+      "cobertura_pct": 91.7,
+      "nulos": 14,
       "min": 665.0,
-      "max": 4615.0
+      "max": 4681.0
     },
     {
       "columna": "newwell_oil_prod",
       "unidad": "k bbl/d",
-      "filas": 153,
-      "cobertura_pct": 91.1,
-      "nulos": 15,
-      "min": 87.098,
-      "max": 487.723
+      "filas": 154,
+      "cobertura_pct": 91.7,
+      "nulos": 14,
+      "min": 87.156,
+      "max": 508.199
     },
     {
       "columna": "newwell_oil_per_rig",
       "unidad": "k bbl/d",
-      "filas": 153,
-      "cobertura_pct": 91.1,
-      "nulos": 15,
-      "min": 0.188,
-      "max": 2.006
+      "filas": 154,
+      "cobertura_pct": 91.7,
+      "nulos": 14,
+      "min": 0.189,
+      "max": 2.007
     },
     {
       "columna": "existing_oil_change",
       "unidad": "k bbl/d",
-      "filas": 153,
-      "cobertura_pct": 91.1,
-      "nulos": 15,
-      "min": -487.02,
-      "max": -64.178
+      "filas": 154,
+      "cobertura_pct": 91.7,
+      "nulos": 14,
+      "min": -483.948,
+      "max": -64.25
     },
     {
       "columna": "newwell_gas_prod",
       "unidad": "MMcf/d",
-      "filas": 153,
-      "cobertura_pct": 91.1,
-      "nulos": 15,
-      "min": 156.88,
-      "max": 997.488
+      "filas": 154,
+      "cobertura_pct": 91.7,
+      "nulos": 14,
+      "min": 156.911,
+      "max": 997.167
     },
     {
       "columna": "newwell_gas_per_rig",
       "unidad": "MMcf/d",
-      "filas": 153,
-      "cobertura_pct": 91.1,
-      "nulos": 15,
-      "min": 0.358,
-      "max": 3.873
+      "filas": 154,
+      "cobertura_pct": 91.7,
+      "nulos": 14,
+      "min": 0.357,
+      "max": 3.887
     },
     {
       "columna": "existing_gas_change",
       "unidad": "MMcf/d",
-      "filas": 153,
-      "cobertura_pct": 91.1,
-      "nulos": 15,
-      "min": -841.218,
-      "max": -73.65
+      "filas": 154,
+      "cobertura_pct": 91.7,
+      "nulos": 14,
+      "min": -879.015,
+      "max": -73.885
     },
     {
       "columna": "wti",
@@ -174,20 +184,20 @@
     {
       "columna": "completion_ratio",
       "unidad": "ratio",
-      "filas": 153,
-      "cobertura_pct": 91.1,
-      "nulos": 15,
+      "filas": 154,
+      "cobertura_pct": 91.7,
+      "nulos": 14,
       "min": 0.409,
       "max": 1.899
     },
     {
       "columna": "net_oil_change",
       "unidad": "k bbl/d",
-      "filas": 153,
-      "cobertura_pct": 91.1,
-      "nulos": 15,
-      "min": -89.586,
-      "max": 103.479
+      "filas": 154,
+      "cobertura_pct": 91.7,
+      "nulos": 14,
+      "min": -89.569,
+      "max": 103.492
     }
   ]
 }
